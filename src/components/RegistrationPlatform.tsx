@@ -398,10 +398,23 @@ export default function RegistrationPlatform() {
   return (
     <div className="min-h-screen bg-[#FAFBF8] text-slate-800 font-sans antialiased selection:bg-[#D2F54E] selection:text-slate-900 pb-32">
       
+      <style jsx global>{`
+        @media screen {
+          .print-only-container {
+            display: none !important;
+          }
+        }
+        @media print {
+          .print-only-container {
+            display: block !important;
+          }
+        }
+      `}</style>
+
       {/* ---------------------------------------------------- */}
       {/* PRINT-ONLY OFFICIAL REPORT LAYOUT (HIDDEN ON SCREEN, VISIBLE ON PRINT/PDF) */}
       {/* ---------------------------------------------------- */}
-      <div className="hidden print:block w-full p-6">
+      <div className="print-only-container hidden print:block w-full p-6">
         <div className="text-center border-b-2 border-slate-900 pb-3 mb-4">
           <h1 className="text-xl font-black uppercase tracking-wide text-slate-900">
             REKAP DAFTAR PESERTA LOMBA KEMERDEKAAN SEION 2026
