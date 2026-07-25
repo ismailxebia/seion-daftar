@@ -42,6 +42,8 @@ export default function RegistrationPlatform() {
 
   // Custom Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isJenisPenampilanOpen, setIsJenisPenampilanOpen] = useState(false);
+  const [isKategoriPerformerOpen, setIsKategoriPerformerOpen] = useState(false);
 
   // Form State - Anak (Umur dihapus)
   const [childData, setChildData] = useState({
@@ -501,18 +503,20 @@ export default function RegistrationPlatform() {
           <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-b from-transparent to-[#FAFBF8]" />
         </div>
 
-        {/* HERO TEXT (TRANSPARENT ON PAGE) */}
-        <div className="relative z-10 pt-3 pb-3 space-y-2 max-w-sm sm:max-w-md">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-xs text-slate-700 rounded-full text-xs font-normal border border-slate-200/80 shadow-2xs">
-            <span className="w-2 h-2 rounded-full bg-[#83DF22] inline-block shrink-0" />
+        {/* HERO HEADER TEXT CONTAINER (Node 237:710 - Exact 20px Top/Bottom Padding & 4px Gaps) */}
+        <div className="relative z-10 pt-[20px] pb-[20px] max-w-sm sm:max-w-md">
+          {/* Chip Badge (Node 237:712) */}
+          <div className="inline-flex items-center gap-[6px] h-[27px] px-[12px] bg-[#F4F4F5]/90 backdrop-blur-xs text-slate-800 rounded-full text-[12px] font-medium border border-slate-200/60 shadow-2xs">
+            <span className="w-[7px] h-[7px] rounded-full bg-[#83DF22] inline-block shrink-0" />
             <span>Formulir Pendaftaran</span>
           </div>
 
-          <div>
-            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+          {/* Heading 2 & Subtitle with exact 4px gap */}
+          <div className="mt-[4px]">
+            <h2 className="text-[20px] font-medium text-[#0F172A] tracking-[-0.45px] leading-[28px]">
               Semarak Lomba Kemerdekaan Seion
             </h2>
-            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+            <p className="text-[13px] text-slate-500 font-normal mt-[4px] leading-tight">
               Batas pendaftaran : 6 Agu 2026
             </p>
           </div>
@@ -927,31 +931,107 @@ export default function RegistrationPlatform() {
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
+                    {/* CUSTOM DROPDOWN: JENIS PENAMPILAN */}
                     <div>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">Jenis Penampilan</label>
-                      <select
-                        value={performerData.jenisPenampilan}
-                        onChange={(e) => setPerformerData({ ...performerData, jenisPenampilan: e.target.value })}
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none cursor-pointer font-normal text-[14px] text-slate-800"
-                      >
-                        <option value="Pembawa Acara">Pembawa Acara</option>
-                        <option value="Menyanyi">Menyanyi</option>
-                        <option value="Menari">Menari</option>
-                        <option value="Puisi/Drama">Puisi / Drama</option>
-                        <option value="Lainnya">Lainnya</option>
-                      </select>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsJenisPenampilanOpen(!isJenisPenampilanOpen)}
+                          className={`w-full h-[42px] px-[17px] bg-white border ${
+                            isJenisPenampilanOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                          } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                        >
+                          <span className="font-normal text-slate-900">{performerData.jenisPenampilan}</span>
+                          <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isJenisPenampilanOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                        </button>
+
+                        {isJenisPenampilanOpen && (
+                          <>
+                            <div className="fixed inset-0 z-30" onClick={() => setIsJenisPenampilanOpen(false)} />
+                            <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                              {['Pembawa Acara', 'Menyanyi', 'Menari', 'Puisi / Drama', 'Lainnya'].map((opt, index) => {
+                                const isSelected = performerData.jenisPenampilan === opt;
+                                return (
+                                  <button
+                                    key={opt}
+                                    type="button"
+                                    style={{ animationDelay: `${index * 35}ms` }}
+                                    onClick={() => {
+                                      setPerformerData(prev => ({ ...prev, jenisPenampilan: opt }));
+                                      setIsJenisPenampilanOpen(false);
+                                    }}
+                                    className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${
+                                      isSelected
+                                        ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                        : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                    }`}
+                                  >
+                                    <span className="font-normal text-xs sm:text-sm">{opt}</span>
+                                    {isSelected && (
+                                      <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
 
+                    {/* CUSTOM DROPDOWN: KATEGORI */}
                     <div>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">Kategori</label>
-                      <select
-                        value={performerData.tipe}
-                        onChange={(e) => setPerformerData({ ...performerData, tipe: e.target.value })}
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none cursor-pointer font-normal text-[14px] text-slate-800"
-                      >
-                        <option value="Individu">Individu (Solo)</option>
-                        <option value="Kelompok">Kelompok / Grup</option>
-                      </select>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsKategoriPerformerOpen(!isKategoriPerformerOpen)}
+                          className={`w-full h-[42px] px-[17px] bg-white border ${
+                            isKategoriPerformerOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                          } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                        >
+                          <span className="font-normal text-slate-900">
+                            {performerData.tipe === 'Individu' ? 'Individu (Solo)' : 'Kelompok / Grup'}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isKategoriPerformerOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                        </button>
+
+                        {isKategoriPerformerOpen && (
+                          <>
+                            <div className="fixed inset-0 z-30" onClick={() => setIsKategoriPerformerOpen(false)} />
+                            <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                              {[
+                                { id: 'Individu', label: 'Individu (Solo)' },
+                                { id: 'Kelompok', label: 'Kelompok / Grup' }
+                              ].map((opt, index) => {
+                                const isSelected = performerData.tipe === opt.id;
+                                return (
+                                  <button
+                                    key={opt.id}
+                                    type="button"
+                                    style={{ animationDelay: `${index * 35}ms` }}
+                                    onClick={() => {
+                                      setPerformerData(prev => ({ ...prev, tipe: opt.id }));
+                                      setIsKategoriPerformerOpen(false);
+                                    }}
+                                    className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${
+                                      isSelected
+                                        ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                        : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                    }`}
+                                  >
+                                    <span className="font-normal text-xs sm:text-sm">{opt.label}</span>
+                                    {isSelected && (
+                                      <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                    )}
+                                  </button>
+                                );
+                              })}
+                            </div>
+                          </>
+                        )}
+                      </div>
                     </div>
 
                     <div>
