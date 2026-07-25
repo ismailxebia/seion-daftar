@@ -171,26 +171,11 @@ export default function RegistrationPlatform() {
 
   // Handler: Tingkatan Dropdown Selection
   const handleSelectTingkatan = (catId: string) => {
-    const matchedCat = AGE_GROUPS.find(g => g.id === catId);
-
-    if (matchedCat) {
-      const defaultComps = [...matchedCat.dexterityList];
-      if (matchedCat.coloringCat) defaultComps.push(matchedCat.coloringCat);
-      if (matchedCat.fashionCat) defaultComps.push(matchedCat.fashionCat);
-      defaultComps.push('Parade Sepeda Hias (Minggu, 16 Ags)');
-
-      setChildData(prev => ({
-        ...prev,
-        tingkatanId: catId,
-        selectedLomba: defaultComps
-      }));
-    } else {
-      setChildData(prev => ({
-        ...prev,
-        tingkatanId: '',
-        selectedLomba: []
-      }));
-    }
+    setChildData(prev => ({
+      ...prev,
+      tingkatanId: catId,
+      selectedLomba: []
+    }));
     setIsDropdownOpen(false);
   };
 
@@ -742,7 +727,7 @@ export default function RegistrationPlatform() {
                               }`}>
                                 {childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
-                              <span className="font-normal">🎨 {activeSelectedCategoryObj.coloringCat}</span>
+                              <span className="font-normal">{activeSelectedCategoryObj.coloringCat}</span>
                             </div>
                           </button>
                         )}
@@ -764,7 +749,7 @@ export default function RegistrationPlatform() {
                               }`}>
                                 {childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
-                              <span className="font-normal">👗 {activeSelectedCategoryObj.fashionCat}</span>
+                              <span className="font-normal">{activeSelectedCategoryObj.fashionCat}</span>
                             </div>
                           </button>
                         )}
@@ -785,7 +770,7 @@ export default function RegistrationPlatform() {
                             }`}>
                               {childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
-                            <span className="font-normal">🚲 Parade Sepeda Hias (Minggu, 16 Ags)</span>
+                            <span className="font-normal">Parade Sepeda Hias (Minggu, 16 Ags)</span>
                           </div>
                         </button>
                       </div>
@@ -974,11 +959,11 @@ export default function RegistrationPlatform() {
                         onChange={(e) => setPerformerData({ ...performerData, jenisPenampilan: e.target.value })}
                         className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer font-normal text-slate-800"
                       >
-                        <option value="MC / Pembawa Acara">🎙️ MC / Pembawa Acara</option>
-                        <option value="Menyanyi">🎤 Menyanyi</option>
-                        <option value="Menari">💃 Menari</option>
-                        <option value="Puisi/Drama">🎭 Puisi / Drama</option>
-                        <option value="Lainnya">✨ Lainnya</option>
+                        <option value="MC / Pembawa Acara">MC / Pembawa Acara</option>
+                        <option value="Menyanyi">Menyanyi</option>
+                        <option value="Menari">Menari</option>
+                        <option value="Puisi/Drama">Puisi / Drama</option>
+                        <option value="Lainnya">Lainnya</option>
                       </select>
                     </div>
 

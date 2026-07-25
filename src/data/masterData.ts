@@ -108,28 +108,28 @@ export const AGE_GROUPS: AgeGroup[] = [
 
 export const ADULT_GROUPS: AdultGroup[] = [
   {
-    title: '👩‍❤️‍👨 Lomba Pasutri (Minggu, 16 Ags)',
+    title: 'Lomba Pasutri (Minggu, 16 Ags)',
     items: [
       'Make Up Pasangan',
       'Joget Balon Pasutri'
     ]
   },
   {
-    title: '👨 Lomba Bapak-Bapak (Minggu, 16 Ags)',
+    title: 'Lomba Bapak-Bapak (Minggu, 16 Ags)',
     items: [
       'Tendangan Penalti',
       'Lempar Bola Pakai Sarung'
     ]
   },
   {
-    title: '👩 Lomba Ibu-Ibu (Minggu, 16 Ags)',
+    title: 'Lomba Ibu-Ibu (Minggu, 16 Ags)',
     items: [
       'Kepiting Air',
       'Balap Kelereng di Dalam Kolam Renang'
     ]
   },
   {
-    title: '🚲 Kebersamaan & Keluarga',
+    title: 'Kebersamaan & Keluarga',
     items: [
       'Parade Sepeda Hias (16 Ags)',
       'Jalan Santai Keluarga (16 Ags)',
