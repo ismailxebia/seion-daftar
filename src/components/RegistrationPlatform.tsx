@@ -5,7 +5,8 @@ import {
   Calendar, Search, 
   Trash2, Printer, FileSpreadsheet, Phone, 
   Check, ChevronDown, Users, AlertCircle, RefreshCw, 
-  Clock, Home, X, CheckCircle2, Lock, KeyRound, ShieldCheck
+  Clock, Home, X, CheckCircle2, Lock, KeyRound, ShieldCheck,
+  Baby, Sparkles, BookOpen, Trophy, GraduationCap, User
 } from 'lucide-react';
 import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -39,10 +40,12 @@ export default function RegistrationPlatform() {
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
 
-  // Form State - Anak
+  // Custom Dropdown State
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+
+  // Form State - Anak (Umur dihapus)
   const [childData, setChildData] = useState({
     namaAnak: '',
-    umur: '',
     tingkatanId: '',
     selectedLomba: [] as string[],
     namaOrangTua: '',
@@ -148,40 +151,27 @@ export default function RegistrationPlatform() {
     }
   };
 
-  // Handler: Ketik Umur -> Auto Connect ke Dropdown Tingkatan
-  const handleAgeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const ageVal = e.target.value;
-    const numAge = parseInt(ageVal, 10);
-
-    let matchedCat = null;
-    if (!isNaN(numAge) && numAge > 0) {
-      matchedCat = AGE_GROUPS.find(g => numAge >= g.minAge && numAge <= g.maxAge);
-    }
-
-    if (matchedCat) {
-      const defaultComps = [...matchedCat.dexterityList];
-      if (matchedCat.coloringCat) defaultComps.push(matchedCat.coloringCat);
-      if (matchedCat.fashionCat) defaultComps.push(matchedCat.fashionCat);
-      defaultComps.push('Parade Sepeda Hias (Minggu, 16 Ags)');
-
-      setChildData(prev => ({
-        ...prev,
-        umur: ageVal,
-        tingkatanId: matchedCat.id,
-        selectedLomba: defaultComps
-      }));
-    } else {
-      setChildData(prev => ({
-        ...prev,
-        umur: ageVal
-      }));
+  // Helper untuk Icon Line Tingkatan Sekolah
+  const renderGroupIcon = (id: string, className = "w-4 h-4 text-slate-500") => {
+    switch (id) {
+      case 'toddler':
+        return <Baby className={className} />;
+      case 'tk':
+        return <Sparkles className={className} />;
+      case 'sd_1_3':
+        return <BookOpen className={className} />;
+      case 'sd_4_6':
+        return <Trophy className={className} />;
+      case 'smp':
+        return <GraduationCap className={className} />;
+      default:
+        return <User className={className} />;
     }
   };
 
-  // Handler: Tingkatan Dropdown Manual Change
-  const handleTingkatanDropdownChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newCatId = e.target.value;
-    const matchedCat = AGE_GROUPS.find(g => g.id === newCatId);
+  // Handler: Tingkatan Dropdown Selection
+  const handleSelectTingkatan = (catId: string) => {
+    const matchedCat = AGE_GROUPS.find(g => g.id === catId);
 
     if (matchedCat) {
       const defaultComps = [...matchedCat.dexterityList];
@@ -191,7 +181,7 @@ export default function RegistrationPlatform() {
 
       setChildData(prev => ({
         ...prev,
-        tingkatanId: newCatId,
+        tingkatanId: catId,
         selectedLomba: defaultComps
       }));
     } else {
@@ -201,6 +191,7 @@ export default function RegistrationPlatform() {
         selectedLomba: []
       }));
     }
+    setIsDropdownOpen(false);
   };
 
   const toggleChildLomba = (item: string) => {
@@ -237,7 +228,6 @@ export default function RegistrationPlatform() {
 
     if (formType === 'children') {
       if (!childData.namaAnak.trim()) { alert("Nama anak wajib diisi!"); setLoading(false); return; }
-      if (!childData.umur) { alert("Umur anak wajib diisi!"); setLoading(false); return; }
       if (!childData.tingkatanId) { alert("Tingkatan sekolah wajib dipilih!"); setLoading(false); return; }
       if (childData.selectedLomba.length === 0) { alert("Pilih minimal 1 lomba!"); setLoading(false); return; }
       if (!childData.blokRumah.trim()) { alert("Blok / No. Rumah wajib diisi!"); setLoading(false); return; }
@@ -247,7 +237,6 @@ export default function RegistrationPlatform() {
       payload = {
         type: 'Anak / Remaja',
         namaPeserta: childData.namaAnak.trim(),
-        umur: parseInt(childData.umur, 10),
         kategoriGroup: selectedCatObj ? selectedCatObj.label : 'Anak-Anak',
         lomba: childData.selectedLomba,
         namaOrangTua: childData.namaOrangTua.trim() || '-',
@@ -305,7 +294,7 @@ export default function RegistrationPlatform() {
       }
 
       // Reset Forms
-      setChildData({ namaAnak: '', umur: '', tingkatanId: '', selectedLomba: [], namaOrangTua: '', whatsapp: '', blokRumah: '' });
+      setChildData({ namaAnak: '', tingkatanId: '', selectedLomba: [], namaOrangTua: '', whatsapp: '', blokRumah: '' });
       setAdultData({ namaPeserta: '', selectedLomba: [], whatsapp: '', blokRumah: '' });
       setPerformerData({ namaPenampil: '', jenisPenampilan: 'Menyanyi', tipe: 'Individu', jumlahOrang: '1', whatsapp: '', blokRumah: '' });
     } catch (err) {
@@ -417,7 +406,8 @@ export default function RegistrationPlatform() {
            p.namaOrangTua?.toLowerCase().includes(searchQuery.toLowerCase());
   });
 
-  const activeSelectedCategoryObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
+  const selectedGroupObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
+  const activeSelectedCategoryObj = selectedGroupObj;
   const formattedToday = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
@@ -514,11 +504,11 @@ export default function RegistrationPlatform() {
           </div>
         </div>
 
-        {/* ADMIN ACCESS BUTTON (REPLACES BANTUAN) */}
+        {/* ADMIN ACCESS BUTTON */}
         {isAdminUnlocked ? (
           <button
             onClick={handleAdminLogout}
-            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-semibold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
             title="Keluar dari mode admin"
           >
             <ShieldCheck className="w-3.5 h-3.5 text-[#D2F54E]" />
@@ -531,7 +521,7 @@ export default function RegistrationPlatform() {
               setPinInput('');
               setShowPinModal(true);
             }}
-            className="px-3 py-1.5 bg-[#D2F54E] hover:bg-[#bce43a] text-slate-950 rounded-full text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+            className="px-3 py-1.5 bg-[#D2F54E] hover:bg-[#bce43a] text-slate-950 rounded-full text-xs font-semibold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
           >
             <Lock className="w-3.5 h-3.5 text-slate-900" />
             <span>Akses Admin</span>
@@ -552,7 +542,7 @@ export default function RegistrationPlatform() {
               Semarak Lomba Kemerdekaan Seion
             </h2>
             <p className="text-xs text-slate-600 mt-1">
-              Isi data diri di bawah ini. Umur akan terhubung langsung ke dropdown tingkatan sekolah.
+              Isi data diri di bawah ini. Pilih tingkatan sekolah untuk melihat cabang lomba yang tersedia.
             </p>
           </div>
 
@@ -631,64 +621,74 @@ export default function RegistrationPlatform() {
                       value={childData.namaAnak}
                       onChange={(e) => setChildData({ ...childData, namaAnak: e.target.value })}
                       placeholder="e.g. Helmi"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                     />
                   </div>
 
-                  {/* FIELD 2: Umur Anak */}
+                  {/* FIELD 2: DROPDOWN CUSTOM TINGKATAN SEKOLAH DENGAN ANIMASI CASCADE & ICON LINE */}
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Umur Anak (Tahun) <span className="text-rose-500">*</span>
+                      Tingkatan Sekolah <span className="text-rose-500">*</span>
                     </label>
-                    <input
-                      type="number"
-                      min="1"
-                      max="18"
-                      required
-                      value={childData.umur}
-                      onChange={handleAgeInput}
-                      placeholder="Masukkan angka (contoh: 8)"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all"
-                    />
-                  </div>
 
-                  {/* FIELD 3: DROPDOWN TINGKATAN SEKOLAH */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <label className="block text-xs font-semibold text-slate-700">
-                        Tingkatan Sekolah <span className="text-rose-500">*</span>
-                      </label>
-                      {childData.tingkatanId && (
-                        <span className="text-[10px] text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-full font-bold">
-                          ✓ Otomatis terhubung
-                        </span>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                        className={`w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] hover:bg-slate-100/80 border ${
+                          isDropdownOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30 bg-white' : 'border-slate-200'
+                        } rounded-2xl font-normal text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                      >
+                        {selectedGroupObj ? (
+                          <div className="flex items-center gap-2.5">
+                            {renderGroupIcon(selectedGroupObj.id, "w-4 h-4 text-emerald-600 shrink-0")}
+                            <span className="font-normal text-slate-900">{selectedGroupObj.label}</span>
+                          </div>
+                        ) : (
+                          <span className="font-normal text-slate-400">-- Pilih Tingkatan Sekolah --</span>
+                        )}
+                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                      </button>
+
+                      {/* DROPDOWN POPUP MENU WITH CASCADE ANIMATION */}
+                      {isDropdownOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)} />
+
+                          <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                            {AGE_GROUPS.map((group, index) => {
+                              const isSelected = childData.tingkatanId === group.id;
+                              return (
+                                <button
+                                  key={group.id}
+                                  type="button"
+                                  style={{ animationDelay: `${index * 35}ms` }}
+                                  onClick={() => handleSelectTingkatan(group.id)}
+                                  className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${
+                                    isSelected
+                                      ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                      : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                  }`}
+                                >
+                                  <div className="flex items-center gap-3">
+                                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-[#83DF22] text-slate-950' : 'bg-slate-100 text-slate-500'}`}>
+                                      {renderGroupIcon(group.id, `w-4 h-4 ${isSelected ? 'text-slate-950' : 'text-slate-600'}`)}
+                                    </div>
+                                    <span className="font-normal">{group.label}</span>
+                                  </div>
+                                  {isSelected && (
+                                    <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
                       )}
                     </div>
-                    
-                    <div className="relative">
-                      <select
-                        required
-                        value={childData.tingkatanId}
-                        onChange={handleTingkatanDropdownChange}
-                        className="w-full pl-4 pr-10 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all appearance-none cursor-pointer"
-                      >
-                        <option value="">-- Pilih Tingkatan Sekolah --</option>
-                        {AGE_GROUPS.map((group) => (
-                          <option key={group.id} value={group.id}>
-                            {group.icon} {group.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
-                        <ChevronDown className="w-4 h-4" />
-                      </div>
-                    </div>
-                    <p className="text-[11px] text-slate-400 mt-1">
-                      Pilihan dropdown terisi otomatis sesuai umur, atau Anda dapat memilih secara manual.
-                    </p>
                   </div>
 
-                  {/* FIELD 4: CABANG LOMBA */}
+                  {/* FIELD 3: CABANG LOMBA */}
                   <div className="pt-2 space-y-3">
                     <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
                       Cabang Lomba Diikuti <span className="text-rose-500">*</span>
@@ -697,7 +697,7 @@ export default function RegistrationPlatform() {
                     {!childData.tingkatanId ? (
                       <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500">
                         <AlertCircle className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                        Silakan isi <b>Umur Anak</b> atau pilih <b>Tingkatan Sekolah</b> di atas untuk membuka daftar pilihan lomba.
+                        Silakan pilih <b>Tingkatan Sekolah</b> di atas untuk membuka daftar pilihan lomba.
                       </div>
                     ) : (
                       <div className="space-y-2">
@@ -709,9 +709,9 @@ export default function RegistrationPlatform() {
                               key={idx}
                               type="button"
                               onClick={() => toggleChildLomba(item)}
-                              className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                              className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${
                                 isChecked
-                                  ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
+                                  ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                                   : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                               }`}
                             >
@@ -721,7 +721,7 @@ export default function RegistrationPlatform() {
                                 }`}>
                                   {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                 </div>
-                                <span>{item}</span>
+                                <span className="font-normal">{item}</span>
                               </div>
                             </button>
                           );
@@ -732,9 +732,9 @@ export default function RegistrationPlatform() {
                           <button
                             type="button"
                             onClick={() => toggleChildLomba(activeSelectedCategoryObj.coloringCat!)}
-                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${
                               childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat)
-                                ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
+                                ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                                 : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                             }`}
                           >
@@ -744,7 +744,7 @@ export default function RegistrationPlatform() {
                               }`}>
                                 {childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
-                              <span>🎨 {activeSelectedCategoryObj.coloringCat}</span>
+                              <span className="font-normal">🎨 {activeSelectedCategoryObj.coloringCat}</span>
                             </div>
                           </button>
                         )}
@@ -754,9 +754,9 @@ export default function RegistrationPlatform() {
                           <button
                             type="button"
                             onClick={() => toggleChildLomba(activeSelectedCategoryObj.fashionCat!)}
-                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${
                               childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat)
-                                ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
+                                ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                                 : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                             }`}
                           >
@@ -766,7 +766,7 @@ export default function RegistrationPlatform() {
                               }`}>
                                 {childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
-                              <span>👗 {activeSelectedCategoryObj.fashionCat}</span>
+                              <span className="font-normal">👗 {activeSelectedCategoryObj.fashionCat}</span>
                             </div>
                           </button>
                         )}
@@ -775,9 +775,9 @@ export default function RegistrationPlatform() {
                         <button
                           type="button"
                           onClick={() => toggleChildLomba('Parade Sepeda Hias (Minggu, 16 Ags)')}
-                          className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                          className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${
                             childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)')
-                              ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
+                              ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                               : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                           }`}
                         >
@@ -787,14 +787,14 @@ export default function RegistrationPlatform() {
                             }`}>
                               {childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                             </div>
-                            <span>🚲 Parade Sepeda Hias (Minggu, 16 Ags)</span>
+                            <span className="font-normal">🚲 Parade Sepeda Hias (Minggu, 16 Ags)</span>
                           </div>
                         </button>
                       </div>
                     )}
                   </div>
 
-                  {/* FIELD 5: Kontak Orang Tua & Rumah */}
+                  {/* FIELD 4: Kontak Orang Tua & Rumah */}
                   <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 mb-1">
@@ -806,7 +806,7 @@ export default function RegistrationPlatform() {
                         value={childData.blokRumah}
                         onChange={(e) => setChildData({ ...childData, blokRumah: e.target.value })}
                         placeholder="B9 No. 12"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-bold"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                     <div>
@@ -818,7 +818,7 @@ export default function RegistrationPlatform() {
                         value={childData.namaOrangTua}
                         onChange={(e) => setChildData({ ...childData, namaOrangTua: e.target.value })}
                         placeholder="Ayah / Ibu"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                     <div>
@@ -830,7 +830,7 @@ export default function RegistrationPlatform() {
                         value={childData.whatsapp}
                         onChange={(e) => setChildData({ ...childData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -866,7 +866,7 @@ export default function RegistrationPlatform() {
                         value={adultData.namaPeserta}
                         onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
                         placeholder="e.g. Pak Hendra & Bu Ani / Pak Budi"
-                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                     <div>
@@ -879,7 +879,7 @@ export default function RegistrationPlatform() {
                         value={adultData.blokRumah}
                         onChange={(e) => setAdultData({ ...adultData, blokRumah: e.target.value })}
                         placeholder="B10 No. 5"
-                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-bold"
+                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -900,9 +900,9 @@ export default function RegistrationPlatform() {
                                 key={itemIdx}
                                 type="button"
                                 onClick={() => toggleAdultLomba(item)}
-                                className={`p-3 rounded-xl border text-xs font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                                className={`p-3 rounded-xl border text-xs font-normal flex items-center justify-between transition-all cursor-pointer text-left ${
                                   isChecked
-                                    ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
+                                    ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                                     : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/60'
                                 }`}
                               >
@@ -912,7 +912,7 @@ export default function RegistrationPlatform() {
                                   }`}>
                                     {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                                   </div>
-                                  <span>{item}</span>
+                                  <span className="font-normal">{item}</span>
                                 </div>
                               </button>
                             );
@@ -931,7 +931,7 @@ export default function RegistrationPlatform() {
                       value={adultData.whatsapp}
                       onChange={(e) => setAdultData({ ...adultData, whatsapp: e.target.value })}
                       placeholder="0812xxxxxxx"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                     />
                   </div>
 
@@ -964,7 +964,7 @@ export default function RegistrationPlatform() {
                       value={performerData.namaPenampil}
                       onChange={(e) => setPerformerData({ ...performerData, namaPenampil: e.target.value })}
                       placeholder="e.g. Sanggar Tari Mizu / Andi Vocalist / MC Bu Anita"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                     />
                   </div>
 
@@ -974,7 +974,7 @@ export default function RegistrationPlatform() {
                       <select
                         value={performerData.jenisPenampilan}
                         onChange={(e) => setPerformerData({ ...performerData, jenisPenampilan: e.target.value })}
-                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer font-normal text-slate-800"
                       >
                         <option value="MC / Pembawa Acara">🎙️ MC / Pembawa Acara</option>
                         <option value="Menyanyi">🎤 Menyanyi</option>
@@ -989,7 +989,7 @@ export default function RegistrationPlatform() {
                       <select
                         value={performerData.tipe}
                         onChange={(e) => setPerformerData({ ...performerData, tipe: e.target.value })}
-                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer font-normal text-slate-800"
                       >
                         <option value="Individu">Individu (Solo)</option>
                         <option value="Kelompok">Kelompok / Grup</option>
@@ -1003,7 +1003,7 @@ export default function RegistrationPlatform() {
                         min="1"
                         value={performerData.jumlahOrang}
                         onChange={(e) => setPerformerData({ ...performerData, jumlahOrang: e.target.value })}
-                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none"
+                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -1019,7 +1019,7 @@ export default function RegistrationPlatform() {
                         value={performerData.blokRumah}
                         onChange={(e) => setPerformerData({ ...performerData, blokRumah: e.target.value })}
                         placeholder="B9 No. 3"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-bold"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                     <div>
@@ -1031,7 +1031,7 @@ export default function RegistrationPlatform() {
                         value={performerData.whatsapp}
                         onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                       />
                     </div>
                   </div>
@@ -1092,7 +1092,7 @@ export default function RegistrationPlatform() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari nama, kode reg, blok rumah..."
-                  className="w-full pl-10 pr-4 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                  className="w-full pl-10 pr-4 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
                 />
               </div>
 
@@ -1204,7 +1204,7 @@ export default function RegistrationPlatform() {
 
       </main>
 
-      {/* FLOATING BOTTOM NAV BAR - OPTIMIZED FOR ALL MOBILE SCREENS */}
+      {/* FLOATING BOTTOM NAV BAR */}
       <nav className="print:hidden fixed bottom-3 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-full px-2 py-1.5 z-40 flex items-center justify-between gap-1 w-[94%] max-w-sm sm:w-auto sm:px-3 sm:py-2 sm:gap-2">
         <button
           onClick={() => handleTabClick('register')}
@@ -1286,7 +1286,7 @@ export default function RegistrationPlatform() {
                     if (pinError) setPinError('');
                   }}
                   placeholder="• • • •"
-                  className="w-full text-center tracking-[1em] text-2xl font-mono font-bold py-3.5 bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all text-slate-900 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm"
+                  className="w-full text-center tracking-[1em] text-2xl font-mono font-normal py-3.5 bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all text-slate-900 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm placeholder:font-normal"
                 />
               </div>
 
