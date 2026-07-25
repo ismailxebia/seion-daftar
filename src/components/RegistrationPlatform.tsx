@@ -8,6 +8,7 @@ import {
   Clock, Home, X, CheckCircle2, Lock, KeyRound, ShieldCheck,
   Baby, Sparkles, BookOpen, Trophy, GraduationCap, User
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, appId } from '@/lib/firebase';
@@ -24,12 +25,12 @@ export default function RegistrationPlatform() {
 
   // Firebase State
   const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [loading, setLoading] = useState(false);
   const [participants, setParticipants] = useState<RegistrationParticipant[]>([]);
+  const [loading, setLoading] = useState<boolean>(false);
   const [ticketModal, setTicketModal] = useState<RegistrationParticipant | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
 
-  // Admin Access Protection State
+  // Admin Security State
   const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(() => {
     if (typeof window !== 'undefined') {
       return sessionStorage.getItem('seion_admin_unlocked') === 'true';
@@ -39,11 +40,20 @@ export default function RegistrationPlatform() {
   const [showPinModal, setShowPinModal] = useState<boolean>(false);
   const [pinInput, setPinInput] = useState<string>('');
   const [pinError, setPinError] = useState<string>('');
+  const [isShaking, setIsShaking] = useState<boolean>(false);
 
   // Custom Dropdown State
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isJenisPenampilanOpen, setIsJenisPenampilanOpen] = useState(false);
   const [isKategoriPerformerOpen, setIsKategoriPerformerOpen] = useState(false);
+
+  // House Number Modal & Global State
+  const [isHouseModalOpen, setIsHouseModalOpen] = useState(false);
+  const [houseModalMode, setHouseModalMode] = useState<'welcome' | 'edit'>('welcome');
+  const [selectedBlokPrefix, setSelectedBlokPrefix] = useState<'B' | 'C' | ''>('B');
+  const [subBlokInput, setSubBlokInput] = useState('');
+  const [noRumahInput, setNoRumahInput] = useState('');
+  const [globalHouseBlock, setGlobalHouseBlock] = useState('');
 
   // Form State - Anak (Umur dihapus)
   const [childData, setChildData] = useState({
@@ -55,12 +65,15 @@ export default function RegistrationPlatform() {
     blokRumah: ''
   });
 
-  // Form State - Dewasa
+  // Form State - Dewasa / Pasutri
   const [adultData, setAdultData] = useState({
+    blokRumah: '',
     namaPeserta: '',
+    role: 'Bapak Bapak' as 'Bapak Bapak' | 'Ibu-Ibu',
+    hasSpouse: false,
+    namaPasangan: '',
     selectedLomba: [] as string[],
-    whatsapp: '',
-    blokRumah: ''
+    whatsapp: ''
   });
 
   // Form State - Pengisi Acara
@@ -75,6 +88,60 @@ export default function RegistrationPlatform() {
 
   // Search
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Check saved House Block on initial load
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      const savedHouse = localStorage.getItem('seion_user_house_block');
+      if (savedHouse) {
+        setGlobalHouseBlock(savedHouse);
+        setChildData(prev => ({ ...prev, blokRumah: savedHouse }));
+        setAdultData(prev => ({ ...prev, blokRumah: savedHouse }));
+        setPerformerData(prev => ({ ...prev, blokRumah: savedHouse }));
+      } else {
+        setIsHouseModalOpen(true);
+        setHouseModalMode('welcome');
+      }
+    }
+  }, []);
+
+  const openEditHouseModal = () => {
+    if (globalHouseBlock) {
+      const match = globalHouseBlock.match(/^([BC])(\d+)\s*\/\s*(\d+)$/i);
+      if (match) {
+        setSelectedBlokPrefix(match[1].toUpperCase() as 'B' | 'C');
+        setSubBlokInput(match[2]);
+        setNoRumahInput(match[3]);
+      }
+    }
+    setHouseModalMode('edit');
+    setIsHouseModalOpen(true);
+  };
+
+  const handleSaveHouseBlock = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedBlokPrefix) {
+      alert("Pilih Blok (B atau C)!");
+      return;
+    }
+    if (!subBlokInput.trim() || !noRumahInput.trim()) {
+      alert("Lengkapi nomor blok dan nomor rumah!");
+      return;
+    }
+
+    const formatted = `${selectedBlokPrefix}${subBlokInput.trim()} / ${noRumahInput.trim()}`;
+    setGlobalHouseBlock(formatted);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('seion_user_house_block', formatted);
+    }
+
+    // Sync form states
+    setChildData(prev => ({ ...prev, blokRumah: formatted }));
+    setAdultData(prev => ({ ...prev, blokRumah: formatted }));
+    setPerformerData(prev => ({ ...prev, blokRumah: formatted }));
+
+    setIsHouseModalOpen(false);
+  };
 
   // Firebase Auth Initialization
   useEffect(() => {
@@ -137,8 +204,10 @@ export default function RegistrationPlatform() {
       setPinError('');
       setActiveTab('participants');
     } else {
+      setIsShaking(true);
       setPinError('PIN Salah! Kode akses yang Anda masukkan tidak cocok.');
       setPinInput('');
+      setTimeout(() => setIsShaking(false), 500);
     }
   };
 
@@ -211,7 +280,7 @@ export default function RegistrationPlatform() {
     setLoading(true);
 
     const code = 'SEION-' + Math.floor(10000 + Math.random() * 90000);
-    let payload: Omit<RegistrationParticipant, 'id'> | null = null;
+    const payloadsToSave: Omit<RegistrationParticipant, 'id'>[] = [];
 
     if (formType === 'children') {
       if (!childData.namaAnak.trim()) { alert("Nama anak wajib diisi!"); setLoading(false); return; }
@@ -221,7 +290,7 @@ export default function RegistrationPlatform() {
 
       const selectedCatObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
 
-      payload = {
+      payloadsToSave.push({
         type: 'Anak / Remaja',
         namaPeserta: childData.namaAnak.trim(),
         kategoriGroup: selectedCatObj ? selectedCatObj.label : 'Anak-Anak',
@@ -231,27 +300,117 @@ export default function RegistrationPlatform() {
         blokRumah: childData.blokRumah.trim(),
         code: code,
         createdAt: serverTimestamp()
-      };
+      });
     } else if (formType === 'adults') {
-      if (!adultData.namaPeserta.trim()) { alert("Nama peserta / pasangan wajib diisi!"); setLoading(false); return; }
-      if (adultData.selectedLomba.length === 0) { alert("Pilih minimal 1 lomba!"); setLoading(false); return; }
       if (!adultData.blokRumah.trim()) { alert("Blok / No. Rumah wajib diisi!"); setLoading(false); return; }
+      if (!adultData.namaPeserta.trim()) { alert("Nama lengkap wajib diisi!"); setLoading(false); return; }
+      if (adultData.hasSpouse && !adultData.namaPasangan.trim()) {
+        const spouseLabel = adultData.role === 'Ibu-Ibu' ? 'Suami' : 'Istri';
+        alert(`Nama lengkap ${spouseLabel} wajib diisi!`);
+        setLoading(false);
+        return;
+      }
+      if (adultData.selectedLomba.length === 0) { alert("Pilih minimal 1 lomba!"); setLoading(false); return; }
 
-      payload = {
-        type: 'Dewasa / Pasutri',
-        namaPeserta: adultData.namaPeserta.trim(),
-        kategoriGroup: 'Dewasa & Umum',
-        lomba: adultData.selectedLomba,
-        whatsapp: adultData.whatsapp.trim() || '-',
-        blokRumah: adultData.blokRumah.trim(),
-        code: code,
-        createdAt: serverTimestamp()
-      };
+      if (adultData.hasSpouse) {
+        const pasutriLomba: string[] = [];
+        const bapakLomba: string[] = [];
+        const ibuLomba: string[] = [];
+
+        const bapakName = adultData.role === 'Bapak Bapak' ? adultData.namaPeserta.trim() : adultData.namaPasangan.trim();
+        const ibuName = adultData.role === 'Ibu-Ibu' ? adultData.namaPeserta.trim() : adultData.namaPasangan.trim();
+
+        adultData.selectedLomba.forEach(l => {
+          const clean = l.replace(' (Bapak-Bapak)', '').replace(' (Ibu-Ibu)', '');
+          if (['Make Up Pasangan', 'Joget Balon Pasutri'].includes(clean)) {
+            pasutriLomba.push(clean);
+          } else if (['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(clean)) {
+            ibuLomba.push(clean);
+          } else if (['Tendangan Penalti', 'Lempar Bola Pakai Sarung'].includes(clean)) {
+            if (l.includes('Ibu-Ibu')) {
+              ibuLomba.push(clean);
+            } else if (l.includes('Bapak-Bapak')) {
+              bapakLomba.push(clean);
+            } else if (adultData.role === 'Ibu-Ibu') {
+              ibuLomba.push(clean);
+            } else {
+              bapakLomba.push(clean);
+            }
+          }
+        });
+
+        // 1. Pasutri Record
+        if (pasutriLomba.length > 0) {
+          payloadsToSave.push({
+            type: 'Dewasa / Pasutri',
+            namaPeserta: `Pasutri (${bapakName} & ${ibuName})`,
+            role: 'Pasutri',
+            hasSpouse: true,
+            namaPasangan: `${bapakName} & ${ibuName}`,
+            kategoriGroup: 'Lomba Pasutri',
+            lomba: pasutriLomba,
+            whatsapp: adultData.whatsapp.trim() || '-',
+            blokRumah: adultData.blokRumah.trim(),
+            code: `${code}-P`,
+            createdAt: serverTimestamp()
+          });
+        }
+
+        // 2. Bapak Record
+        if (bapakLomba.length > 0) {
+          payloadsToSave.push({
+            type: 'Dewasa (Perorangan)',
+            namaPeserta: bapakName,
+            role: 'Bapak Bapak',
+            hasSpouse: true,
+            namaPasangan: ibuName,
+            kategoriGroup: 'Lomba Bapak-Bapak',
+            lomba: bapakLomba,
+            whatsapp: adultData.whatsapp.trim() || '-',
+            blokRumah: adultData.blokRumah.trim(),
+            code: `${code}-B`,
+            createdAt: serverTimestamp()
+          });
+        }
+
+        // 3. Ibu Record
+        if (ibuLomba.length > 0) {
+          payloadsToSave.push({
+            type: 'Dewasa (Perorangan)',
+            namaPeserta: ibuName,
+            role: 'Ibu-Ibu',
+            hasSpouse: true,
+            namaPasangan: bapakName,
+            kategoriGroup: 'Lomba Ibu-Ibu',
+            lomba: ibuLomba,
+            whatsapp: adultData.whatsapp.trim() || '-',
+            blokRumah: adultData.blokRumah.trim(),
+            code: `${code}-I`,
+            createdAt: serverTimestamp()
+          });
+        }
+      } else {
+        // Single Bapak or Single Ibu
+        const cleanLombaList = adultData.selectedLomba.map(l => l.replace(' (Bapak-Bapak)', '').replace(' (Ibu-Ibu)', ''));
+        payloadsToSave.push({
+          type: 'Dewasa (Perorangan)',
+          namaPeserta: adultData.namaPeserta.trim(),
+          role: adultData.role,
+          hasSpouse: false,
+          namaPasangan: '-',
+          kategoriGroup: `Dewasa (${adultData.role})`,
+          lomba: cleanLombaList,
+          whatsapp: adultData.whatsapp.trim() || '-',
+          blokRumah: adultData.blokRumah.trim(),
+          code: code,
+          createdAt: serverTimestamp()
+        });
+      }
     } else if (formType === 'performers') {
       if (!performerData.namaPenampil.trim()) { alert("Nama penampil wajib diisi!"); setLoading(false); return; }
       if (!performerData.blokRumah.trim()) { alert("Blok / No. Rumah wajib diisi!"); setLoading(false); return; }
 
-      payload = {
+      payloadsToSave.push({
         type: 'Pengisi Acara (Malam Puncak)',
         namaPeserta: performerData.namaPenampil.trim(),
         kategoriGroup: `Pengisi Acara (${performerData.jenisPenampilan})`,
@@ -260,35 +419,55 @@ export default function RegistrationPlatform() {
         blokRumah: performerData.blokRumah.trim(),
         code: code,
         createdAt: serverTimestamp()
-      };
+      });
     }
 
-    if (!payload) {
+    if (payloadsToSave.length === 0) {
       setLoading(false);
       return;
     }
 
     try {
+      const savedDocs: RegistrationParticipant[] = [];
       if (user) {
         const colRef = collection(db, 'artifacts', appId, 'public', 'data', 'registrations');
-        const docRef = await addDoc(colRef, payload);
-        const savedData: RegistrationParticipant = { id: docRef.id, ...payload };
-        setTicketModal(savedData);
+        for (const p of payloadsToSave) {
+          const docRef = await addDoc(colRef, p);
+          savedDocs.push({ id: docRef.id, ...p });
+        }
       } else {
-        const mockDoc: RegistrationParticipant = { id: 'local-' + Date.now(), ...payload };
-        setParticipants(prev => [mockDoc, ...prev]);
-        setTicketModal(mockDoc);
+        payloadsToSave.forEach((p, idx) => {
+          savedDocs.push({ id: 'local-' + Date.now() + '-' + idx, ...p });
+        });
       }
+
+      setParticipants(prev => [...savedDocs, ...prev]);
+
+      // Set ticket modal view with combined summary doc
+      const summaryLomba = payloadsToSave.flatMap(p => p.lomba);
+      const ticketDoc: RegistrationParticipant = {
+        id: savedDocs[0].id,
+        code: code,
+        type: adultData.hasSpouse ? 'Dewasa / Pasutri' : payloadsToSave[0].type,
+        namaPeserta: adultData.hasSpouse ? `${adultData.namaPeserta} & ${adultData.namaPasangan}` : payloadsToSave[0].namaPeserta,
+        namaPasangan: adultData.hasSpouse ? adultData.namaPasangan : undefined,
+        role: adultData.role,
+        kategoriGroup: adultData.hasSpouse ? `Pasutri (${adultData.namaPeserta} & ${adultData.namaPasangan})` : payloadsToSave[0].kategoriGroup,
+        lomba: summaryLomba,
+        whatsapp: payloadsToSave[0].whatsapp,
+        blokRumah: payloadsToSave[0].blokRumah
+      };
+      setTicketModal(ticketDoc);
 
       // Reset Forms
       setChildData({ namaAnak: '', tingkatanId: '', selectedLomba: [], namaOrangTua: '', whatsapp: '', blokRumah: '' });
-      setAdultData({ namaPeserta: '', selectedLomba: [], whatsapp: '', blokRumah: '' });
+      setAdultData({ blokRumah: '', namaPeserta: '', role: 'Bapak Bapak', hasSpouse: false, namaPasangan: '', selectedLomba: [], whatsapp: '' });
       setPerformerData({ namaPenampil: '', jenisPenampilan: 'Menyanyi', tipe: 'Individu', jumlahOrang: '1', whatsapp: '', blokRumah: '' });
     } catch (err) {
       console.warn("Save warning fallback to local storage:", err);
-      const mockDoc: RegistrationParticipant = { id: 'local-' + Date.now(), ...payload };
-      setParticipants(prev => [mockDoc, ...prev]);
-      setTicketModal(mockDoc);
+      const mockDocs: RegistrationParticipant[] = payloadsToSave.map((p, idx) => ({ id: 'local-' + Date.now() + '-' + idx, ...p }));
+      setParticipants(prev => [...mockDocs, ...prev]);
+      setTicketModal(mockDocs[0]);
     } finally {
       setLoading(false);
     }
@@ -311,9 +490,125 @@ export default function RegistrationPlatform() {
     }
   };
 
+  // Helper function to categorize adult lomba items by participant (Pasutri, Bapak, Ibu)
+  const categorizeLombaForDisplay = (lombaList: string[], role?: string, mainName?: string, spouseName?: string) => {
+    const pasutri: string[] = [];
+    const bapak: string[] = [];
+    const ibu: string[] = [];
+    const general: string[] = [];
+
+    const bapakName = role === 'Bapak Bapak' ? (mainName || 'Bapak') : (spouseName || 'Suami');
+    const ibuName = role === 'Ibu-Ibu' ? (mainName || 'Ibu') : (spouseName || 'Istri');
+
+    (lombaList || []).forEach(l => {
+      const clean = l.replace(' (Bapak-Bapak)', '').replace(' (Ibu-Ibu)', '');
+      if (['Make Up Pasangan', 'Joget Balon Pasutri'].includes(clean)) {
+        pasutri.push(clean);
+      } else if (['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(clean)) {
+        ibu.push(clean);
+      } else if (['Tendangan Penalti', 'Lempar Bola Pakai Sarung'].includes(clean)) {
+        if (l.includes('Ibu-Ibu')) {
+          ibu.push(clean);
+        } else if (l.includes('Bapak-Bapak')) {
+          bapak.push(clean);
+        } else if (role === 'Ibu-Ibu') {
+          ibu.push(clean);
+        } else {
+          bapak.push(clean);
+        }
+      } else {
+        general.push(clean);
+      }
+    });
+
+    return { pasutri, bapak, ibu, general, bapakName, ibuName };
+  };
+
+  // Helper to expand any legacy/combined Pasutri record into 3 separate display records
+  const expandParticipantsForDisplay = (list: RegistrationParticipant[]): RegistrationParticipant[] => {
+    const expanded: RegistrationParticipant[] = [];
+
+    list.forEach(p => {
+      if (p.hasSpouse && p.lomba && p.lomba.length > 1 && (p.type === 'Dewasa / Pasutri' || p.kategoriGroup?.includes('Pasutri'))) {
+        const pasutriLomba: string[] = [];
+        const bapakLomba: string[] = [];
+        const ibuLomba: string[] = [];
+
+        const bapakName = p.role === 'Bapak Bapak' ? (p.namaPeserta || 'Bapak') : (p.namaPasangan || 'Suami');
+        const ibuName = p.role === 'Ibu-Ibu' ? (p.namaPeserta || 'Ibu') : (p.namaPasangan || 'Istri');
+
+        p.lomba.forEach(l => {
+          const clean = l.replace(' (Bapak-Bapak)', '').replace(' (Ibu-Ibu)', '');
+          if (['Make Up Pasangan', 'Joget Balon Pasutri'].includes(clean)) {
+            pasutriLomba.push(clean);
+          } else if (['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(clean)) {
+            ibuLomba.push(clean);
+          } else if (['Tendangan Penalti', 'Lempar Bola Pakai Sarung'].includes(clean)) {
+            if (l.includes('Ibu-Ibu')) {
+              ibuLomba.push(clean);
+            } else if (l.includes('Bapak-Bapak')) {
+              bapakLomba.push(clean);
+            } else if (p.role === 'Ibu-Ibu') {
+              ibuLomba.push(clean);
+            } else {
+              bapakLomba.push(clean);
+            }
+          }
+        });
+
+        const activeCatCount = [pasutriLomba.length > 0, bapakLomba.length > 0, ibuLomba.length > 0].filter(Boolean).length;
+
+        if (activeCatCount > 1) {
+          if (pasutriLomba.length > 0) {
+            expanded.push({
+              ...p,
+              id: `${p.id}-P`,
+              code: p.code ? `${p.code}-P` : p.code,
+              namaPeserta: `Pasutri (${bapakName} & ${ibuName})`,
+              namaPasangan: `${bapakName} & ${ibuName}`,
+              role: 'Pasutri',
+              kategoriGroup: 'Lomba Pasutri',
+              lomba: pasutriLomba
+            });
+          }
+          if (bapakLomba.length > 0) {
+            expanded.push({
+              ...p,
+              id: `${p.id}-B`,
+              code: p.code ? `${p.code}-B` : p.code,
+              namaPeserta: bapakName,
+              namaPasangan: ibuName,
+              role: 'Bapak Bapak',
+              kategoriGroup: 'Lomba Bapak-Bapak',
+              lomba: bapakLomba
+            });
+          }
+          if (ibuLomba.length > 0) {
+            expanded.push({
+              ...p,
+              id: `${p.id}-I`,
+              code: p.code ? `${p.code}-I` : p.code,
+              namaPeserta: ibuName,
+              namaPasangan: bapakName,
+              role: 'Ibu-Ibu',
+              kategoriGroup: 'Lomba Ibu-Ibu',
+              lomba: ibuLomba
+            });
+          }
+          return;
+        }
+      }
+
+      expanded.push(p);
+    });
+
+    return expanded;
+  };
+
   // AUDITED & REFINED EXCEL / CSV EXPORT
   const exportToExcel = () => {
-    if (participants.length === 0) {
+    const listToExport = expandParticipantsForDisplay(participants);
+    if (listToExport.length === 0) {
       alert("Belum ada data peserta untuk diunduh.");
       return;
     }
@@ -339,34 +634,30 @@ export default function RegistrationPlatform() {
     const csvLines: string[] = [];
     csvLines.push(`"REKAP DAFTAR PESERTA LOMBA KEMERDEKAAN SEION 2026"`);
     csvLines.push(`"HUT RI Ke-81 Cluster Mizu & B9-B10"`);
-    csvLines.push(`"Tanggal Ekspor: ${todayStr} | Total: ${participants.length} Peserta"`);
+    csvLines.push(`"Tanggal Ekspor: ${todayStr} | Total: ${listToExport.length} Peserta"`);
     csvLines.push('');
-
     const headers = [
       "No.",
       "Kode Reg",
       "Nama Peserta",
-      "Umur",
-      "Tipe Pendaftaran",
-      "Kategori / Tingkatan",
-      "Cabang Lomba Diikuti",
       "Nama Orang Tua",
+      "Kategori / Role",
+      "Lomba Diikuti",
       "Blok / Rumah",
       "No. WhatsApp"
     ];
     csvLines.push(headers.map(h => `"${h}"`).join(','));
 
-    participants.forEach((p, index) => {
-      const lombaStr = Array.isArray(p.lomba) ? p.lomba.join('; ') : '-';
+    listToExport.forEach((p, index) => {
+      const parentDisplay = (p.type === 'Anak / Remaja' || (p.namaOrangTua && p.namaOrangTua !== '-')) ? p.namaOrangTua : '-';
+
       const row = [
         index + 1,
         cleanField(p.code || '-'),
         cleanField(p.namaPeserta || '-'),
-        cleanField(p.umur ? `${p.umur} Thn` : '-'),
-        cleanField(p.type || '-'),
-        cleanField(p.kategoriGroup || '-'),
-        cleanField(lombaStr),
-        cleanField(p.namaOrangTua || '-'),
+        cleanField(parentDisplay),
+        cleanField(p.kategoriGroup || p.type || '-'),
+        cleanField(Array.isArray(p.lomba) ? p.lomba.join('; ') : '-'),
         cleanField(p.blokRumah || '-'),
         cleanPhone(p.whatsapp)
       ];
@@ -385,12 +676,20 @@ export default function RegistrationPlatform() {
     URL.revokeObjectURL(url);
   };
 
-  // Filtered Participants
-  const filteredParticipants = participants.filter(p => {
-    return p.namaPeserta?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.code?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.blokRumah?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.namaOrangTua?.toLowerCase().includes(searchQuery.toLowerCase());
+  // Expanded & Filtered Participants
+  const expandedParticipants = expandParticipantsForDisplay(participants);
+
+  const filteredParticipants = expandedParticipants.filter(p => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) return true;
+    return (
+      p.namaPeserta?.toLowerCase().includes(q) ||
+      p.code?.toLowerCase().includes(q) ||
+      p.blokRumah?.toLowerCase().includes(q) ||
+      (p.namaOrangTua && p.namaOrangTua !== '-' && p.namaOrangTua.toLowerCase().includes(q)) ||
+      p.kategoriGroup?.toLowerCase().includes(q) ||
+      p.lomba?.some(l => l.toLowerCase().includes(q))
+    );
   });
 
   const selectedGroupObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
@@ -410,6 +709,25 @@ export default function RegistrationPlatform() {
           .print-only-container {
             display: block !important;
           }
+          body {
+            background: white !important;
+          }
+        }
+        .print-table {
+          width: 100%;
+          border-collapse: collapse;
+          font-size: 9pt;
+        }
+        .print-table th, .print-table td {
+          border: 1px solid #cbd5e1;
+          padding: 6px 8px;
+          text-align: left;
+          vertical-align: top;
+        }
+        .print-table th {
+          background-color: #f1f5f9;
+          font-weight: bold;
+          color: #0f172a;
         }
       `}</style>
 
@@ -436,36 +754,44 @@ export default function RegistrationPlatform() {
               <th style={{ width: '5%', textAlign: 'center' }}>No</th>
               <th style={{ width: '14%' }}>Kode Reg</th>
               <th style={{ width: '20%' }}>Nama Peserta</th>
-              <th style={{ width: '16%' }}>Kategori / Umur</th>
-              <th style={{ width: '25%' }}>Lomba Diikuti</th>
-              <th style={{ width: '12%' }}>Ortu / WA</th>
-              <th style={{ width: '8%', textAlign: 'center' }}>Blok</th>
+              <th style={{ width: '15%' }}>Nama Ortu</th>
+              <th style={{ width: '18%' }}>Kategori / Role</th>
+              <th style={{ width: '20%' }}>Lomba Diikuti</th>
+              <th style={{ width: '8%' }}>Blok</th>
             </tr>
           </thead>
           <tbody>
-            {filteredParticipants.map((p, idx) => (
-              <tr key={p.id || idx}>
-                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
-                <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
-                <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
-                <td>
-                  <div>{p.kategoriGroup}</div>
-                  {p.umur && <div style={{ fontSize: '8.5pt', color: '#475569' }}>({p.umur} Thn)</div>}
-                </td>
-                <td>
-                  <ul style={{ margin: 0, paddingLeft: '14px', listStyleType: 'disc' }}>
-                    {p.lomba?.map((l, i) => (
-                      <li key={i}>{l}</li>
-                    ))}
-                  </ul>
-                </td>
-                <td>
-                  <div>{p.namaOrangTua || '-'}</div>
-                  <div style={{ fontSize: '8.5pt', color: '#475569' }}>{p.whatsapp}</div>
-                </td>
-                <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{p.blokRumah}</td>
-              </tr>
-            ))}
+            {filteredParticipants.map((p, idx) => {
+              const parentDisplay = (p.type === 'Anak / Remaja' || (p.namaOrangTua && p.namaOrangTua !== '-'))
+                ? p.namaOrangTua
+                : '-';
+
+              return (
+                <tr key={p.id || idx}>
+                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
+                  <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
+                  <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
+                  <td style={{ fontWeight: parentDisplay !== '-' ? 'bold' : 'normal' }}>
+                    {parentDisplay}
+                  </td>
+                  <td>
+                    <div>{p.kategoriGroup}</div>
+                    {p.umur && <div style={{ fontSize: '8.5pt', color: '#475569' }}>({p.umur} Thn)</div>}
+                  </td>
+                  <td>
+                    <ul style={{ margin: 0, paddingLeft: '14px', listStyleType: 'disc' }}>
+                      {p.lomba?.map((l, i) => (
+                        <li key={i}>{l}</li>
+                      ))}
+                    </ul>
+                  </td>
+                  <td>
+                    <div>Blok {p.blokRumah}</div>
+                    {p.whatsapp && p.whatsapp !== '-' && <div style={{ fontSize: '8.5pt', color: '#475569' }}>{p.whatsapp}</div>}
+                  </td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
 
@@ -505,11 +831,18 @@ export default function RegistrationPlatform() {
 
         {/* HERO HEADER TEXT CONTAINER (Lebih Lapang & Wide: pt-9 pb-8) */}
         <div className="relative z-10 pt-9 pb-8 max-w-sm sm:max-w-md">
-          {/* Chip Badge (Node 237:712) */}
-          <div className="inline-flex items-center gap-[6px] h-[27px] px-[12px] bg-[#F4F4F5]/90 backdrop-blur-xs text-slate-800 rounded-full text-[12px] font-medium border border-slate-200/60 shadow-2xs">
+          {/* Header Pill Badge (Interactive House Block Selector) */}
+          <button
+            type="button"
+            onClick={openEditHouseModal}
+            className="inline-flex items-center gap-2 h-[32px] px-[14px] bg-[#F4F4F5]/90 hover:bg-[#E4E4E7] backdrop-blur-xs text-slate-800 rounded-full text-[12px] font-normal border border-slate-200/80 shadow-2xs transition-all cursor-pointer"
+          >
             <span className="w-[7px] h-[7px] rounded-full bg-[#83DF22] inline-block shrink-0" />
             <span>Formulir Pendaftaran</span>
-          </div>
+            <span className="text-slate-300 font-light">|</span>
+            <span className="font-semibold text-slate-900">{globalHouseBlock || 'Pilih No. Rumah'}</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-500 shrink-0 ml-0.5" />
+          </button>
 
           {/* Heading 2 & Subtitle with 6px gap */}
           <div className="mt-2">
@@ -744,20 +1077,7 @@ export default function RegistrationPlatform() {
                   </div>
 
                   {/* FIELD 4: Kontak Orang Tua & Rumah */}
-                  <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        Blok / No. Rumah <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={childData.blokRumah}
-                        onChange={(e) => setChildData({ ...childData, blokRumah: e.target.value })}
-                        placeholder="B9 No. 12"
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                      />
-                    </div>
+                  <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     <div>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         Nama Orang Tua <span className="text-slate-400 font-normal">(Opsional)</span>
@@ -766,7 +1086,7 @@ export default function RegistrationPlatform() {
                         type="text"
                         value={childData.namaOrangTua}
                         onChange={(e) => setChildData({ ...childData, namaOrangTua: e.target.value })}
-                        placeholder="Ayah / Ibu"
+                        placeholder="Nama Orang Tua"
                         className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
@@ -799,76 +1119,250 @@ export default function RegistrationPlatform() {
               {/* 2. FORM DEWASA & PASUTRI */}
               {formType === 'adults' && (
                 <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
-                  <div className="pb-3 border-b border-slate-100">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">FORM DEWASA</span>
-                    <h3 className="text-base font-bold text-slate-900">Pendaftaran Lomba Dewasa & Pasutri</h3>
+                  <div className="pb-2 border-b border-slate-100">
+                    <h3 className="text-base font-bold text-slate-900">Data Peserta Dewasa / Pasutri</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-                    <div className="sm:col-span-2">
+                  {/* FIELD 1: NAMA LENGKAP */}
+                  <div>
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                      Nama Lengkap <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={adultData.namaPeserta}
+                      onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
+                      placeholder="Nama Lengkap"
+                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                    />
+                  </div>
+
+                  {/* FIELD 3: KAMU SEBAGAI APA */}
+                  <div>
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                      Kamu sebagai apa <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdultData(prev => {
+                            const newRole = 'Bapak Bapak';
+                            let newLomba = prev.selectedLomba;
+                            // If not pasutri, remove opposite role lomba
+                            if (!prev.hasSpouse) {
+                              newLomba = newLomba.filter(l => !['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(l));
+                            }
+                            return { ...prev, role: newRole, selectedLomba: newLomba };
+                          });
+                        }}
+                        className={`h-[44px] px-4 rounded-[12px] border text-xs sm:text-sm font-normal flex items-center gap-3 transition-all cursor-pointer ${
+                          adultData.role === 'Bapak Bapak'
+                            ? 'bg-white border-slate-900 text-slate-900 shadow-xs font-semibold'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          adultData.role === 'Bapak Bapak' ? 'border-slate-900 bg-white' : 'border-slate-300'
+                        }`}>
+                          {adultData.role === 'Bapak Bapak' && <div className="w-2 h-2 rounded-full bg-slate-900" />}
+                        </div>
+                        <span>Bapak Bapak</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAdultData(prev => {
+                            const newRole = 'Ibu-Ibu';
+                            let newLomba = prev.selectedLomba;
+                            // If not pasutri, remove opposite role lomba
+                            if (!prev.hasSpouse) {
+                              newLomba = newLomba.filter(l => !['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].includes(l));
+                            }
+                            return { ...prev, role: newRole, selectedLomba: newLomba };
+                          });
+                        }}
+                        className={`h-[44px] px-4 rounded-[12px] border text-xs sm:text-sm font-normal flex items-center gap-3 transition-all cursor-pointer ${
+                          adultData.role === 'Ibu-Ibu'
+                            ? 'bg-white border-slate-900 text-slate-900 shadow-xs font-semibold'
+                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                        }`}
+                      >
+                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                          adultData.role === 'Ibu-Ibu' ? 'border-slate-900 bg-white' : 'border-slate-300'
+                        }`}>
+                          {adultData.role === 'Ibu-Ibu' && <div className="w-2 h-2 rounded-full bg-slate-900" />}
+                        </div>
+                        <span>Ibu-Ibu</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* FIELD 4: [DINAMIS] NAMA PASANGAN (SUAMI / ISTRI) - HANYA MUNCUL JIKA HAS SPOUSE CHECKED */}
+                  {adultData.hasSpouse && (
+                    <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200">
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        Nama Peserta / Pasangan <span className="text-rose-500">*</span>
+                        {adultData.role === 'Ibu-Ibu' ? 'Nama Lengkap Suami' : 'Nama Lengkap Istri'} <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
-                        required
-                        value={adultData.namaPeserta}
-                        onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
-                        placeholder="e.g. Pak Hendra & Bu Ani / Pak Budi"
+                        required={adultData.hasSpouse}
+                        value={adultData.namaPasangan}
+                        onChange={(e) => setAdultData({ ...adultData, namaPasangan: e.target.value })}
+                        placeholder={adultData.role === 'Ibu-Ibu' ? 'Nama Suami' : 'Nama Istri'}
                         className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
+                  )}
+
+                  {/* FIELD 5: CHECKBOX TOGGLE PASUTRI */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setAdultData(prev => {
+                        const newHasSpouse = !prev.hasSpouse;
+                        // If unchecking pasutri, remove any selected Pasutri lomba
+                        let newLomba = prev.selectedLomba;
+                        if (!newHasSpouse) {
+                          newLomba = newLomba.filter(l => !['Make Up Pasangan', 'Joget Balon Pasutri'].includes(l));
+                          if (prev.role === 'Bapak Bapak') {
+                            newLomba = newLomba.filter(l => !['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(l));
+                          } else {
+                            newLomba = newLomba.filter(l => !['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].includes(l));
+                          }
+                        }
+                        return { ...prev, hasSpouse: newHasSpouse, selectedLomba: newLomba };
+                      })}
+                      className="w-full py-3 px-4 bg-[#F4F4F5] hover:bg-[#E4E4E7] rounded-[12px] border border-slate-200/80 text-xs sm:text-sm font-normal text-slate-700 flex items-center gap-3 transition-all cursor-pointer text-left"
+                    >
+                      <div className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 transition-colors ${
+                        adultData.hasSpouse ? 'bg-slate-900 text-white' : 'border border-slate-400 bg-white'
+                      }`}>
+                        {adultData.hasSpouse && <Check className="w-3 h-3 stroke-[3]" />}
+                      </div>
+                      <span className="font-normal text-slate-800">
+                        {adultData.hasSpouse
+                          ? 'Uncheck jika mendaftarkan tanpa pasangan'
+                          : 'Checklist untuk menambahkan nama pasangan suami / istri'}
+                      </span>
+                    </button>
+                  </div>
+
+                  {/* LOMBA SECTIONS */}
+                  <div className="space-y-4 pt-1">
+                    
+                    {/* SECTION 1: LOMBA PASUTRI (DISABLED JIKA UNCHECKED) */}
                     <div>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        Blok / Rumah <span className="text-rose-500">*</span>
+                        Lomba Pasutri (Minggu, 16 Ags) <span className="text-rose-500">*</span>
                       </label>
-                      <input
-                        type="text"
-                        required
-                        value={adultData.blokRumah}
-                        onChange={(e) => setAdultData({ ...adultData, blokRumah: e.target.value })}
-                        placeholder="B10 No. 5"
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                      />
+                      <div className="space-y-2">
+                        {['Make Up Pasangan', 'Joget Balon Pasutri'].map((item, itemIdx) => {
+                          const isChecked = adultData.selectedLomba.includes(item);
+                          const isDisabled = !adultData.hasSpouse;
+                          return (
+                            <button
+                              key={itemIdx}
+                              type="button"
+                              disabled={isDisabled}
+                              onClick={() => toggleAdultLomba(item)}
+                              className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
+                                isDisabled
+                                  ? 'bg-[#EEEEEE] text-slate-400 border border-transparent pointer-events-none'
+                                  : isChecked
+                                    ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
+                                    : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                isChecked
+                                  ? 'bg-[#83DF22] text-slate-950'
+                                  : isDisabled
+                                    ? 'border border-slate-300 bg-white'
+                                    : 'border border-slate-300 bg-white'
+                              }`}>
+                                {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                              </div>
+                              <span>{item}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
-                  </div>
 
-                  <div className="space-y-4 pt-1">
-                    <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Pilih Perlombaan <span className="text-rose-500">*</span>
-                    </label>
-
-                    {ADULT_GROUPS.map((group, idx) => (
-                      <div key={idx} className="bg-[#F8F9FA] p-3 sm:p-3.5 rounded-2xl border border-slate-200/60 space-y-2">
-                        <h4 className="text-xs font-bold text-slate-700">{group.title}</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {group.items.map((item, itemIdx) => {
+                    {/* SECTION 2: LOMBA BAPAK-BAPAK (DITAMPILKAN JIKA PASUTRI CHECKED ATAU ROLE === 'Bapak Bapak') */}
+                    {(adultData.hasSpouse || adultData.role === 'Bapak Bapak') && (
+                      <div className="animate-in fade-in-0 duration-200">
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                          Lomba Bapak-Bapak (Minggu, 16 Ags) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="space-y-2">
+                          {['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].map((item, itemIdx) => {
                             const isChecked = adultData.selectedLomba.includes(item);
+                            const displayLabel = item.replace(' (Bapak-Bapak)', '');
                             return (
                               <button
                                 key={itemIdx}
                                 type="button"
                                 onClick={() => toggleAdultLomba(item)}
-                                className={`p-3 rounded-xl border text-xs font-normal flex items-center justify-between transition-all cursor-pointer text-left ${isChecked
-                                    ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
-                                    : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-100/60'
-                                  }`}
+                                className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
+                                  isChecked
+                                    ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
+                                    : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
+                                }`}
                               >
-                                <div className="flex items-center gap-2.5">
-                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
-                                    }`}>
-                                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                                  </div>
-                                  <span className="font-normal">{item}</span>
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                  isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                }`}>
+                                  {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
                                 </div>
+                                <span>{displayLabel}</span>
                               </button>
                             );
                           })}
                         </div>
                       </div>
-                    ))}
+                    )}
+
+                    {/* SECTION 3: LOMBA IBU-IBU (DITAMPILKAN JIKA PASUTRI CHECKED ATAU ROLE === 'Ibu-Ibu') */}
+                    {(adultData.hasSpouse || adultData.role === 'Ibu-Ibu') && (
+                      <div className="animate-in fade-in-0 duration-200">
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                          Lomba Ibu-Ibu (Minggu, 16 Ags) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="space-y-2">
+                          {['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].map((item, itemIdx) => {
+                            const isChecked = adultData.selectedLomba.includes(item);
+                            const displayLabel = item;
+                            return (
+                              <button
+                                key={itemIdx}
+                                type="button"
+                                onClick={() => toggleAdultLomba(item)}
+                                className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
+                                  isChecked
+                                    ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
+                                    : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                  isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                }`}>
+                                  {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <span>{displayLabel}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+
                   </div>
 
+                  {/* FIELD WHATSAPP */}
                   <div>
                     <label className="block text-[12px] font-medium text-slate-700 mb-2">
                       No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
@@ -910,59 +1404,60 @@ export default function RegistrationPlatform() {
                       required
                       value={performerData.namaPenampil}
                       onChange={(e) => setPerformerData({ ...performerData, namaPenampil: e.target.value })}
-                      placeholder="e.g. Sanggar Tari Mizu / Andi Vocalist / Bu Anita"
+                      placeholder="Nama Penampil / Kelompok"
                       className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
-                    {/* CUSTOM DROPDOWN: JENIS PENAMPILAN */}
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Jenis Penampilan</label>
-                      <div className="relative">
-                        <button
-                          type="button"
-                          onClick={() => setIsJenisPenampilanOpen(!isJenisPenampilanOpen)}
-                          className={`w-full h-[42px] px-[17px] bg-white border ${isJenisPenampilanOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
-                            } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
-                        >
-                          <span className="font-normal text-slate-900">{performerData.jenisPenampilan}</span>
-                          <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isJenisPenampilanOpen ? 'rotate-180 text-slate-700' : ''}`} />
-                        </button>
+                  {/* CUSTOM DROPDOWN: JENIS PENAMPILAN (FULL WIDTH) */}
+                  <div>
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">Jenis Penampilan</label>
+                    <div className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsJenisPenampilanOpen(!isJenisPenampilanOpen)}
+                        className={`w-full h-[42px] px-[17px] bg-white border ${isJenisPenampilanOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                          } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                      >
+                        <span className="font-normal text-slate-900">{performerData.jenisPenampilan}</span>
+                        <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isJenisPenampilanOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                      </button>
 
-                        {isJenisPenampilanOpen && (
-                          <>
-                            <div className="fixed inset-0 z-30" onClick={() => setIsJenisPenampilanOpen(false)} />
-                            <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-                              {['Pembawa Acara', 'Menyanyi', 'Menari', 'Puisi / Drama', 'Lainnya'].map((opt, index) => {
-                                const isSelected = performerData.jenisPenampilan === opt;
-                                return (
-                                  <button
-                                    key={opt}
-                                    type="button"
-                                    style={{ animationDelay: `${index * 35}ms` }}
-                                    onClick={() => {
-                                      setPerformerData(prev => ({ ...prev, jenisPenampilan: opt }));
-                                      setIsJenisPenampilanOpen(false);
-                                    }}
-                                    className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${isSelected
-                                        ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
-                                        : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
-                                      }`}
-                                  >
-                                    <span className="font-normal text-xs sm:text-sm">{opt}</span>
-                                    {isSelected && (
-                                      <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
-                      </div>
+                      {isJenisPenampilanOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setIsJenisPenampilanOpen(false)} />
+                          <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                            {['Pembawa Acara', 'Menyanyi', 'Menari', 'Puisi / Drama', 'Lainnya'].map((opt, index) => {
+                              const isSelected = performerData.jenisPenampilan === opt;
+                              return (
+                                <button
+                                  key={opt}
+                                  type="button"
+                                  style={{ animationDelay: `${index * 35}ms` }}
+                                  onClick={() => {
+                                    setPerformerData(prev => ({ ...prev, jenisPenampilan: opt }));
+                                    setIsJenisPenampilanOpen(false);
+                                  }}
+                                  className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${isSelected
+                                      ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                      : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                    }`}
+                                >
+                                  <span className="font-normal text-xs sm:text-sm">{opt}</span>
+                                  {isSelected && (
+                                    <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </>
+                      )}
                     </div>
+                  </div>
 
+                  {/* KATEGORI & JUMLAH ANGGOTA (2-COLUMN GRID BELOW) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     {/* CUSTOM DROPDOWN: KATEGORI */}
                     <div>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">Kategori</label>
@@ -994,7 +1489,11 @@ export default function RegistrationPlatform() {
                                     type="button"
                                     style={{ animationDelay: `${index * 35}ms` }}
                                     onClick={() => {
-                                      setPerformerData(prev => ({ ...prev, tipe: opt.id }));
+                                      setPerformerData(prev => ({
+                                        ...prev,
+                                        tipe: opt.id,
+                                        jumlahOrang: opt.id === 'Individu' ? '1' : (prev.jumlahOrang === '1' ? '2' : prev.jumlahOrang)
+                                      }));
                                       setIsKategoriPerformerOpen(false);
                                     }}
                                     className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${isSelected
@@ -1015,44 +1514,34 @@ export default function RegistrationPlatform() {
                       </div>
                     </div>
 
+                    {/* JUMLAH ANGGOTA (DISABLED IF INDIVIDU) */}
                     <div>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">Jumlah Anggota</label>
                       <input
                         type="number"
                         min="1"
-                        value={performerData.jumlahOrang}
+                        disabled={performerData.tipe === 'Individu'}
+                        value={performerData.tipe === 'Individu' ? '1' : performerData.jumlahOrang}
                         onChange={(e) => setPerformerData({ ...performerData, jumlahOrang: e.target.value })}
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                        className={`w-full h-[42px] px-[17px] border border-slate-200/90 rounded-[8px] transition-all font-normal text-[14px] ${performerData.tipe === 'Individu'
+                            ? 'bg-[#EEEEEE] text-slate-400 cursor-not-allowed'
+                            : 'bg-white text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38]'
+                          }`}
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        Blok / Rumah <span className="text-rose-500">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={performerData.blokRumah}
-                        onChange={(e) => setPerformerData({ ...performerData, blokRumah: e.target.value })}
-                        placeholder="B9 No. 3"
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
-                      </label>
-                      <input
-                        type="tel"
-                        value={performerData.whatsapp}
-                        onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
-                        placeholder="0812xxxxxxx"
-                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                      No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
+                    </label>
+                    <input
+                      type="tel"
+                      value={performerData.whatsapp}
+                      onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
+                      placeholder="0812xxxxxxx"
+                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                    />
                   </div>
 
                   <button
@@ -1143,34 +1632,32 @@ export default function RegistrationPlatform() {
             ) : (
               <div className="space-y-2.5">
                 {filteredParticipants.map((p) => (
-                  <div key={p.id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-[#BCE88C] transition-all space-y-2">
-                    <div className="flex items-start justify-between">
-                      <div>
-                        <span className="text-[10px] font-mono font-extrabold text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-md">
-                          {p.code}
-                        </span>
-                        <h4 className="font-bold text-sm text-slate-900 mt-1">
-                          {p.namaPeserta} {p.umur && <span className="text-xs text-slate-500 font-normal">({p.umur} Thn)</span>}
-                        </h4>
-                      </div>
+                  <div key={p.id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-[#BCE88C] transition-all space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                        <span>{p.namaPeserta}</span>
+                        {p.umur && <span className="text-xs text-slate-500 font-normal">({p.umur} Thn)</span>}
+                      </h4>
                       <button
                         onClick={() => setDeleteModalId(p.id)}
-                        className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0"
+                        className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0 transition-colors"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
 
-                    <div className="text-xs text-slate-600 space-y-1 bg-[#F8F9FA] p-2.5 rounded-xl">
+                    <div className="text-xs text-slate-600 space-y-1 bg-[#F8F9FA] p-3 rounded-xl">
                       <p className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">{p.type} • {p.kategoriGroup}</p>
-                      <ul className="list-disc list-inside text-slate-700 font-medium space-y-0.5">
-                        {p.lomba?.map((l, i) => <li key={i} className="truncate">{l}</li>)}
+                      <ul className="list-disc list-inside text-slate-800 font-semibold space-y-0.5 pt-0.5">
+                        {p.lomba?.map((l, i) => <li key={i}>{l}</li>)}
                       </ul>
                     </div>
 
-                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1">
-                      <span>Ortu: {p.namaOrangTua || '-'} | WA: {p.whatsapp}</span>
-                      <span className="font-semibold text-slate-700">Blok: {p.blokRumah}</span>
+                    <div className="flex items-center justify-between pt-0.5">
+                      <span className="text-[10px] font-mono font-extrabold text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-md">
+                        {p.code}
+                      </span>
+                      <span className="text-[11px] font-semibold text-slate-700">Blok: {p.blokRumah}</span>
                     </div>
                   </div>
                 ))}
@@ -1191,7 +1678,7 @@ export default function RegistrationPlatform() {
                   <span className="font-bold text-slate-900">Minggu, 9 Agustus 2026</span>
                   <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-full font-semibold text-[10px]">Hari 1</span>
                 </div>
-                <p className="text-slate-600">🎯 Lomba Ketangkasan Anak (Kolam Mizu & B9–B10)</p>
+                <p className="text-slate-600">🎯 Lomba Ketangkasan Anak</p>
               </div>
 
               <div className="p-3.5 sm:p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
@@ -1223,125 +1710,123 @@ export default function RegistrationPlatform() {
 
       </main>
 
-      {/* FLOATING BOTTOM NAV BAR (Node 239:963 - Exact Glassmorphism Pill Design from Figma) */}
-      <nav
-        className="print:hidden fixed bottom-5 left-1/2 -translate-x-1/2 rounded-full p-[4px] gap-[4px] z-50 flex items-center justify-between w-[160px] h-[56px]"
-        style={{
-          borderRadius: '9999px',
-          border: '1px solid rgba(226, 232, 240, 0.90)',
-          background: 'rgba(255, 255, 255, 0.70)',
-          boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.10)',
-          backdropFilter: 'blur(7.5px)',
-          WebkitBackdropFilter: 'blur(7.5px)'
-        }}
+      {/* FLOATING BOTTOM NAV BAR & MORPHING PIN DIALOG */}
+      {/* 1. Backdrop Overlay */}
+      <AnimatePresence>
+        {showPinModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.25 }}
+            onClick={() => {
+              setShowPinModal(false);
+              setPinInput('');
+              setPinError('');
+            }}
+            className="print:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-40 cursor-pointer"
+          />
+        )}
+      </AnimatePresence>
+
+      {/* 2. Persistent Single Morphing Container */}
+      <div
+        className={`print:hidden fixed left-1/2 -translate-x-1/2 z-50 transition-all duration-300 ease-out pointer-events-none ${
+          showPinModal
+            ? 'top-1/2 -translate-y-1/2 w-full max-w-[92vw] sm:max-w-sm'
+            : 'bottom-5 w-[160px] h-[56px]'
+        }`}
       >
-        {/* BUTTON 1: HOME / REGISTER */}
-        <button
-          type="button"
-          title="Form Pendaftaran"
-          onClick={() => handleTabClick('register')}
-          className={`w-[48px] h-[48px] rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${activeTab === 'register'
-              ? 'bg-[#C5F542] text-[#0F172A] shadow-xs'
-              : 'bg-[#F4F4F5] text-[#334155] hover:bg-[#E4E4E7]'
-            }`}
+        <motion.div
+          layout
+          transition={{
+            type: "spring",
+            stiffness: 350,
+            damping: 30,
+            mass: 0.8
+          }}
+          animate={isShaking ? { x: [-12, 12, -8, 8, -4, 4, 0] } : { x: 0 }}
+          className={`pointer-events-auto overflow-hidden transition-colors duration-300 ${
+            showPinModal
+              ? 'bg-white border border-slate-200/90 rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl relative text-slate-900'
+              : 'bg-white/80 backdrop-blur-[7.5px] rounded-full p-[4px] border border-slate-200/90 shadow-[0_1px_2px_rgba(0,0,0,0.1)] flex items-center justify-between w-[160px] h-[56px]'
+          }`}
         >
-          <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M3 10.5L12 3L21 10.5V20A1 1 0 0 1 20 21H15V14H9V21H4A1 1 0 0 1 3 20V10.5Z" />
-          </svg>
-        </button>
+          <AnimatePresence mode="wait">
+            {!showPinModal ? (
+              /* FLOATING BOTTOM NAV BAR BUTTONS */
+              <motion.div
+                key="nav-buttons"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.15 }}
+                className="flex items-center justify-between gap-[4px] w-full h-full"
+              >
+                {/* BUTTON 1: HOME / REGISTER */}
+                <button
+                  type="button"
+                  title="Form Pendaftaran"
+                  onClick={() => handleTabClick('register')}
+                  className={`w-[48px] h-[48px] rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                    activeTab === 'register'
+                      ? 'bg-[#C5F542] text-[#0F172A] shadow-xs'
+                      : 'bg-[#F4F4F5] text-[#334155] hover:bg-[#E4E4E7]'
+                  }`}
+                >
+                  <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 10.5L12 3L21 10.5V20A1 1 0 0 1 20 21H15V14H9V21H4A1 1 0 0 1 3 20V10.5Z" />
+                  </svg>
+                </button>
 
-        {/* BUTTON 2: PESERTA (ADMIN) */}
-        <button
-          type="button"
-          title={isAdminUnlocked ? "Data Peserta" : "Data Peserta (Terkunci PIN)"}
-          onClick={() => handleTabClick('participants')}
-          className={`w-[48px] h-[48px] rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${activeTab === 'participants'
-              ? 'bg-[#C5F542] text-[#0F172A] shadow-xs'
-              : 'bg-[#F4F4F5] text-[#334155] hover:bg-[#E4E4E7]'
-            }`}
-        >
-          <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-            <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-          </svg>
-        </button>
+                {/* BUTTON 2: PESERTA (ADMIN) */}
+                <button
+                  type="button"
+                  title={isAdminUnlocked ? "Data Peserta" : "Data Peserta (Terkunci PIN)"}
+                  onClick={() => handleTabClick('participants')}
+                  className={`w-[48px] h-[48px] rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                    activeTab === 'participants'
+                      ? 'bg-[#C5F542] text-[#0F172A] shadow-xs'
+                      : 'bg-[#F4F4F5] text-[#334155] hover:bg-[#E4E4E7]'
+                  }`}
+                >
+                  <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                  </svg>
+                </button>
 
-        {/* BUTTON 3: JADWAL */}
-        <button
-          type="button"
-          title="Jadwal Acara"
-          onClick={() => handleTabClick('schedule')}
-          className={`w-[48px] h-[48px] rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${activeTab === 'schedule'
-              ? 'bg-[#C5F542] text-[#0F172A] shadow-xs'
-              : 'bg-[#F4F4F5] text-[#334155] hover:bg-[#E4E4E7]'
-            }`}
-        >
-          <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
-            <line x1="16" y1="2" x2="16" y2="6" />
-            <line x1="8" y1="2" x2="8" y2="6" />
-            <line x1="3" y1="10" x2="21" y2="10" />
-          </svg>
-        </button>
-      </nav>
-
-      {/* MODAL PIN ADMIN PROTECTION */}
-      {showPinModal && (
-        <div className="print:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-[92vw] sm:max-w-sm rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl relative">
-            <button
-              onClick={() => {
-                setShowPinModal(false);
-                setPinInput('');
-                setPinError('');
-              }}
-              className="absolute right-4 top-4 p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="text-center space-y-1.5 pt-2">
-              <div className="w-12 h-12 bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 rounded-full flex items-center justify-center mx-auto mb-2 shadow-2xs">
-                <Lock className="w-6 h-6 stroke-[2.5]" />
-              </div>
-              <h3 className="font-bold text-base text-slate-900">Akses Khusus Admin</h3>
-              <p className="text-xs text-slate-500 max-w-xs mx-auto">
-                Masukkan Kode PIN Admin (4 Digit) untuk membuka rekap data peserta pendaftaran.
-              </p>
-            </div>
-
-            <form onSubmit={handleVerifyPin} className="space-y-4">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider text-center mb-2">
-                  PIN Admin
-                </label>
-                <input
-                  type="password"
-                  maxLength={4}
-                  inputMode="numeric"
-                  pattern="[0-9]*"
-                  autoFocus
-                  required
-                  value={pinInput}
-                  onChange={(e) => {
-                    setPinInput(e.target.value);
-                    if (pinError) setPinError('');
-                  }}
-                  placeholder="• • • •"
-                  className="w-full text-center tracking-[1em] text-2xl font-mono font-normal py-3.5 bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all text-slate-900 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm placeholder:font-normal"
-                />
-              </div>
-
-              {pinError && (
-                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{pinError}</span>
-                </div>
-              )}
-
-              <div className="flex gap-2 pt-1">
+                {/* BUTTON 3: JADWAL */}
+                <button
+                  type="button"
+                  title="Jadwal Acara"
+                  onClick={() => handleTabClick('schedule')}
+                  className={`w-[48px] h-[48px] rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer ${
+                    activeTab === 'schedule'
+                      ? 'bg-[#C5F542] text-[#0F172A] shadow-xs'
+                      : 'bg-[#F4F4F5] text-[#334155] hover:bg-[#E4E4E7]'
+                  }`}
+                >
+                  <svg className="w-[20px] h-[20px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                    <line x1="16" y1="2" x2="16" y2="6" />
+                    <line x1="8" y1="2" x2="8" y2="6" />
+                    <line x1="3" y1="10" x2="21" y2="10" />
+                  </svg>
+                </button>
+              </motion.div>
+            ) : (
+              /* PIN FORM CONTENT */
+              <motion.div
+                key="pin-form-content"
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+                transition={{ duration: 0.25, delay: 0.05 }}
+                className="space-y-5 relative"
+              >
                 <button
                   type="button"
                   onClick={() => {
@@ -1349,21 +1834,79 @@ export default function RegistrationPlatform() {
                     setPinInput('');
                     setPinError('');
                   }}
-                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                  className="absolute right-0 top-0 p-1.5 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full cursor-pointer transition-colors"
                 >
-                  Batal
+                  <X className="w-4 h-4" />
                 </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
-                >
-                  <KeyRound className="w-4 h-4" /> Masuk Admin
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+
+                <div className="text-center space-y-1.5 pt-1">
+                  <div className="w-12 h-12 bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 rounded-full flex items-center justify-center mx-auto mb-2 shadow-2xs">
+                    <Lock className="w-6 h-6 stroke-[2.5]" />
+                  </div>
+                  <h3 className="font-bold text-base text-slate-900">Akses Khusus Admin</h3>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                    Masukkan Kode PIN Admin (4 Digit) untuk membuka rekap data peserta pendaftaran.
+                  </p>
+                </div>
+
+                <form onSubmit={handleVerifyPin} className="space-y-4">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider text-center mb-2">
+                      PIN Admin
+                    </label>
+                    <input
+                      type="password"
+                      maxLength={4}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      autoFocus
+                      required
+                      value={pinInput}
+                      onChange={(e) => {
+                        setPinInput(e.target.value);
+                        if (pinError) setPinError('');
+                      }}
+                      placeholder="• • • •"
+                      className="w-full text-center tracking-[1em] text-2xl font-mono font-normal py-3.5 bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all text-slate-900 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm placeholder:font-normal"
+                    />
+                  </div>
+
+                  {pinError && (
+                    <motion.div
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2"
+                    >
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{pinError}</span>
+                    </motion.div>
+                  )}
+
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowPinModal(false);
+                        setPinInput('');
+                        setPinError('');
+                      }}
+                      className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer transition-colors"
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors active:scale-95"
+                    >
+                      <KeyRound className="w-4 h-4" /> Masuk Admin
+                    </button>
+                  </div>
+                </form>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </div>
 
       {/* MODAL BUKTI PENDAFTARAN DIGITAL */}
       {ticketModal && (
@@ -1392,10 +1935,61 @@ export default function RegistrationPlatform() {
                 <span className="font-medium">{ticketModal.kategoriGroup}</span>
               </div>
               <div className="pt-1">
-                <span className="text-slate-400 block mb-0.5">Lomba:</span>
-                <ul className="list-disc list-inside font-semibold text-slate-800 space-y-0.5">
-                  {ticketModal.lomba?.map((l, i) => <li key={i}>{l}</li>)}
-                </ul>
+                <span className="text-slate-400 block mb-1">Lomba Diikuti:</span>
+                {(() => {
+                  const { pasutri, bapak, ibu, general, bapakName, ibuName } = categorizeLombaForDisplay(
+                    ticketModal.lomba || [],
+                    ticketModal.role,
+                    ticketModal.namaPeserta,
+                    ticketModal.namaPasangan
+                  );
+                  const hasCategorized = pasutri.length > 0 || bapak.length > 0 || ibu.length > 0;
+
+                  if (!hasCategorized) {
+                    return (
+                      <ul className="list-disc list-inside font-semibold text-slate-800 space-y-0.5">
+                        {ticketModal.lomba?.map((l, i) => <li key={i}>{l}</li>)}
+                      </ul>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-1.5 bg-[#F8F9FA] p-2.5 rounded-xl border border-slate-200/80">
+                      {pasutri.length > 0 && (
+                        <div className="text-xs">
+                          <span className="text-[10px] font-extrabold uppercase text-emerald-800 bg-emerald-100 px-1.5 py-0.5 rounded mr-1">
+                            👥 Lomba Pasutri
+                          </span>
+                          <span className="text-slate-900 font-bold">{pasutri.join(', ')}</span>
+                        </div>
+                      )}
+                      {bapak.length > 0 && (
+                        <div className="text-xs">
+                          <span className="text-[10px] font-extrabold uppercase text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded mr-1">
+                            👨 Lomba Bapak ({bapakName})
+                          </span>
+                          <span className="text-slate-900 font-bold">{bapak.join(', ')}</span>
+                        </div>
+                      )}
+                      {ibu.length > 0 && (
+                        <div className="text-xs">
+                          <span className="text-[10px] font-extrabold uppercase text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded mr-1">
+                            👩 Lomba Ibu ({ibuName})
+                          </span>
+                          <span className="text-slate-900 font-bold">{ibu.join(', ')}</span>
+                        </div>
+                      )}
+                      {general.length > 0 && (
+                        <div className="text-xs">
+                          <span className="text-[10px] font-extrabold uppercase text-slate-700 bg-slate-200 px-1.5 py-0.5 rounded mr-1">
+                            🎯 Lomba Lainnya
+                          </span>
+                          <span className="text-slate-900 font-bold">{general.join(', ')}</span>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -1448,6 +2042,116 @@ export default function RegistrationPlatform() {
           </div>
         </div>
       )}
+
+      {/* WELCOME PAGE & EDIT NO. RUMAH MODAL DIALOG */}
+      <AnimatePresence>
+        {isHouseModalOpen && (
+          <div className="print:hidden fixed inset-0 z-50 flex items-center justify-center p-4">
+            {/* Backdrop Overlay */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (houseModalMode === 'edit' && globalHouseBlock) {
+                  setIsHouseModalOpen(false);
+                }
+              }}
+              className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
+            />
+
+            {/* Modal Dialog Container */}
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2 }}
+              className="bg-white border border-slate-200/90 w-full max-w-[92vw] sm:max-w-md rounded-[28px] p-6 sm:p-7 shadow-2xl relative z-10 text-slate-900 space-y-5"
+            >
+              {/* HEADING BASED ON MODE */}
+              {houseModalMode === 'welcome' ? (
+                <div>
+                  <h3 className="font-bold text-slate-900 text-base sm:text-[18px] leading-snug">
+                    Selamat datang di form pendaftaran
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-600 font-normal mt-1 leading-relaxed">
+                    Agar lebih mudah tulis blok dan nomor rumah dahulu ya.
+                  </p>
+                </div>
+              ) : (
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <h3 className="font-bold text-slate-900 text-base sm:text-[18px]">
+                    Ubah Nomor Rumah
+                  </h3>
+                  {globalHouseBlock && (
+                    <button
+                      type="button"
+                      onClick={() => setIsHouseModalOpen(false)}
+                      className="p-1 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {/* FORM INPUTS MATCHING SCREENSHOT 1 */}
+              <form onSubmit={handleSaveHouseBlock} className="space-y-5">
+                <div>
+                  <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                    Blok / No. Rumah <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                    {/* DROPDOWN BLOK (ONLY B AND C) */}
+                    <div className="relative">
+                      <select
+                        required
+                        value={selectedBlokPrefix}
+                        onChange={(e) => setSelectedBlokPrefix(e.target.value as 'B' | 'C')}
+                        className="w-full h-[42px] px-3 bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 appearance-none cursor-pointer"
+                      >
+                        <option value="" disabled>Blok</option>
+                        <option value="B">B</option>
+                        <option value="C">C</option>
+                      </select>
+                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                    </div>
+
+                    {/* SUB-BLOK NUMBER INPUT (e.g. 10 or 9) */}
+                    <input
+                      type="text"
+                      required
+                      value={subBlokInput}
+                      onChange={(e) => setSubBlokInput(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="15"
+                      className="w-full h-[42px] px-[14px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                    />
+
+                    {/* HOUSE NUMBER INPUT (e.g. 24 or 23) */}
+                    <input
+                      type="text"
+                      required
+                      value={noRumahInput}
+                      onChange={(e) => setNoRumahInput(e.target.value.replace(/[^0-9]/g, ''))}
+                      placeholder="No."
+                      className="w-full h-[42px] px-[14px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                    />
+                  </div>
+                </div>
+
+                {/* LANJUTKAN BUTTON */}
+                <button
+                  type="submit"
+                  className="w-full h-[46px] bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                >
+                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                  Lanjutkan
+                </button>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
     </div>
   );

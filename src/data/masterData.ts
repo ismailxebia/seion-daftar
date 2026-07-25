@@ -29,6 +29,9 @@ export interface RegistrationParticipant {
   kategoriGroup: string;
   lomba: string[];
   namaOrangTua?: string;
+  namaPasangan?: string;
+  hasSpouse?: boolean;
+  role?: string;
   whatsapp: string;
   blokRumah: string;
   code: string;
@@ -126,14 +129,6 @@ export const ADULT_GROUPS: AdultGroup[] = [
     items: [
       'Kepiting Air',
       'Balap Kelereng di Dalam Kolam Renang'
-    ]
-  },
-  {
-    title: 'Kebersamaan & Keluarga',
-    items: [
-      'Parade Sepeda Hias (16 Ags)',
-      'Jalan Santai Keluarga (16 Ags)',
-      'Lomba Foto Keluarga (17 Ags)'
     ]
   }
 ];
