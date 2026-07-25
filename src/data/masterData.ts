@@ -45,7 +45,7 @@ export const AGE_GROUPS: AgeGroup[] = [
     coloringCat: null,
     fashionCat: null,
     dexterityList: [
-      'Cocokkan Bola Warna (Minggu, 9 Ags)',
+      'Mencocokan Warna Bola (Minggu, 9 Ags)',
       'Pindahkan Air dengan Spons (Minggu, 9 Ags)'
     ]
   },
