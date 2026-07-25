@@ -5,7 +5,7 @@ import {
   Calendar, Search, 
   Trash2, Printer, FileSpreadsheet, Phone, 
   Check, ChevronDown, Users, AlertCircle, RefreshCw, 
-  Clock, HelpCircle, Home, X, CheckCircle2
+  Clock, Home, X, CheckCircle2, Lock, KeyRound, ShieldCheck
 } from 'lucide-react';
 import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
@@ -27,7 +27,17 @@ export default function RegistrationPlatform() {
   const [participants, setParticipants] = useState<RegistrationParticipant[]>([]);
   const [ticketModal, setTicketModal] = useState<RegistrationParticipant | null>(null);
   const [deleteModalId, setDeleteModalId] = useState<string | null>(null);
-  const [showHelpModal, setShowHelpModal] = useState(false);
+
+  // Admin Access Protection State
+  const [isAdminUnlocked, setIsAdminUnlocked] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return sessionStorage.getItem('seion_admin_unlocked') === 'true';
+    }
+    return false;
+  });
+  const [showPinModal, setShowPinModal] = useState<boolean>(false);
+  const [pinInput, setPinInput] = useState<string>('');
+  const [pinError, setPinError] = useState<string>('');
 
   // Form State - Anak
   const [childData, setChildData] = useState({
@@ -97,6 +107,46 @@ export default function RegistrationPlatform() {
 
     return () => unsubscribe();
   }, [user]);
+
+  // Tab Navigation Guard for Admin Protection
+  const handleTabClick = (tab: 'register' | 'participants' | 'schedule') => {
+    if (tab === 'participants' && !isAdminUnlocked) {
+      setPinError('');
+      setPinInput('');
+      setShowPinModal(true);
+      return;
+    }
+    setActiveTab(tab);
+  };
+
+  // PIN Verification Handler
+  const handleVerifyPin = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (pinInput.trim() === '2200') {
+      setIsAdminUnlocked(true);
+      if (typeof window !== 'undefined') {
+        sessionStorage.setItem('seion_admin_unlocked', 'true');
+      }
+      setShowPinModal(false);
+      setPinInput('');
+      setPinError('');
+      setActiveTab('participants');
+    } else {
+      setPinError('PIN Salah! Kode akses yang Anda masukkan tidak cocok.');
+      setPinInput('');
+    }
+  };
+
+  // Admin Logout Handler
+  const handleAdminLogout = () => {
+    setIsAdminUnlocked(false);
+    if (typeof window !== 'undefined') {
+      sessionStorage.removeItem('seion_admin_unlocked');
+    }
+    if (activeTab === 'participants') {
+      setActiveTab('register');
+    }
+  };
 
   // Handler: Ketik Umur -> Auto Connect ke Dropdown Tingkatan
   const handleAgeInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -464,12 +514,29 @@ export default function RegistrationPlatform() {
           </div>
         </div>
 
-        <button
-          onClick={() => setShowHelpModal(true)}
-          className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full text-xs font-medium shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
-        >
-          <HelpCircle className="w-3.5 h-3.5 text-slate-500" /> Bantuan
-        </button>
+        {/* ADMIN ACCESS BUTTON (REPLACES BANTUAN) */}
+        {isAdminUnlocked ? (
+          <button
+            onClick={handleAdminLogout}
+            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+            title="Keluar dari mode admin"
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-[#D2F54E]" />
+            <span>Admin (Keluar)</span>
+          </button>
+        ) : (
+          <button
+            onClick={() => {
+              setPinError('');
+              setPinInput('');
+              setShowPinModal(true);
+            }}
+            className="px-3 py-1.5 bg-[#D2F54E] hover:bg-[#bce43a] text-slate-950 rounded-full text-xs font-bold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
+          >
+            <Lock className="w-3.5 h-3.5 text-slate-900" />
+            <span>Akses Admin</span>
+          </button>
+        )}
       </header>
 
       {/* MAIN CONTENT AREA */}
@@ -1014,8 +1081,8 @@ export default function RegistrationPlatform() {
           </div>
         )}
 
-        {/* TAB 2: DAFTAR PESERTA & EKSPOR DATA */}
-        {activeTab === 'participants' && (
+        {/* TAB 2: DAFTAR PESERTA & EKSPOR DATA (PROTECTED FOR ADMIN) */}
+        {activeTab === 'participants' && isAdminUnlocked && (
           <div className="space-y-4">
             <div className="bg-white p-4 border border-slate-200/80 rounded-3xl shadow-2xs space-y-3">
               <div className="relative">
@@ -1140,7 +1207,7 @@ export default function RegistrationPlatform() {
       {/* FLOATING BOTTOM NAV BAR - OPTIMIZED FOR ALL MOBILE SCREENS */}
       <nav className="print:hidden fixed bottom-3 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-full px-2 py-1.5 z-40 flex items-center justify-between gap-1 w-[94%] max-w-sm sm:w-auto sm:px-3 sm:py-2 sm:gap-2">
         <button
-          onClick={() => setActiveTab('register')}
+          onClick={() => handleTabClick('register')}
           className={`flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'register'
               ? 'bg-slate-900 text-[#D2F54E] shadow-2xs'
@@ -1152,7 +1219,7 @@ export default function RegistrationPlatform() {
         </button>
 
         <button
-          onClick={() => setActiveTab('participants')}
+          onClick={() => handleTabClick('participants')}
           className={`flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'participants'
               ? 'bg-slate-900 text-[#D2F54E] shadow-2xs'
@@ -1160,11 +1227,11 @@ export default function RegistrationPlatform() {
           }`}
         >
           <Users className="w-3.5 h-3.5 shrink-0" />
-          <span>Peserta ({participants.length})</span>
+          <span>{isAdminUnlocked ? `Peserta (${participants.length})` : 'Peserta 🔒'}</span>
         </button>
 
         <button
-          onClick={() => setActiveTab('schedule')}
+          onClick={() => handleTabClick('schedule')}
           className={`flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'schedule'
               ? 'bg-slate-900 text-[#D2F54E] shadow-2xs'
@@ -1175,6 +1242,84 @@ export default function RegistrationPlatform() {
           <span>Jadwal</span>
         </button>
       </nav>
+
+      {/* MODAL PIN ADMIN PROTECTION */}
+      {showPinModal && (
+        <div className="print:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-slate-200 w-full max-w-[92vw] sm:max-w-sm rounded-3xl p-5 sm:p-6 space-y-5 shadow-2xl relative">
+            <button
+              onClick={() => {
+                setShowPinModal(false);
+                setPinInput('');
+                setPinError('');
+              }}
+              className="absolute right-4 top-4 p-1 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="text-center space-y-1.5 pt-2">
+              <div className="w-12 h-12 bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 rounded-full flex items-center justify-center mx-auto mb-2 shadow-2xs">
+                <Lock className="w-6 h-6 stroke-[2.5]" />
+              </div>
+              <h3 className="font-bold text-base text-slate-900">Akses Khusus Admin</h3>
+              <p className="text-xs text-slate-500 max-w-xs mx-auto">
+                Masukkan Kode PIN Admin (4 Digit) untuk membuka rekap data peserta pendaftaran.
+              </p>
+            </div>
+
+            <form onSubmit={handleVerifyPin} className="space-y-4">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 uppercase tracking-wider text-center mb-2">
+                  PIN Admin
+                </label>
+                <input
+                  type="password"
+                  maxLength={4}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoFocus
+                  required
+                  value={pinInput}
+                  onChange={(e) => {
+                    setPinInput(e.target.value);
+                    if (pinError) setPinError('');
+                  }}
+                  placeholder="• • • •"
+                  className="w-full text-center tracking-[1em] text-2xl font-mono font-bold py-3.5 bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all text-slate-900 placeholder:tracking-normal placeholder:font-sans placeholder:text-sm"
+                />
+              </div>
+
+              {pinError && (
+                <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 text-xs rounded-xl flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{pinError}</span>
+                </div>
+              )}
+
+              <div className="flex gap-2 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowPinModal(false);
+                    setPinInput('');
+                    setPinError('');
+                  }}
+                  className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="submit"
+                  className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5"
+                >
+                  <KeyRound className="w-4 h-4" /> Masuk Admin
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* MODAL BUKTI PENDAFTARAN DIGITAL */}
       {ticketModal && (
@@ -1220,57 +1365,15 @@ export default function RegistrationPlatform() {
               <button
                 onClick={() => {
                   setTicketModal(null);
-                  setActiveTab('participants');
+                  if (isAdminUnlocked) {
+                    setActiveTab('participants');
+                  }
                 }}
                 className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-2xl flex items-center justify-center gap-1 cursor-pointer"
               >
-                Lihat Rekap
+                Tutup
               </button>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* HELP MODAL */}
-      {showHelpModal && (
-        <div className="print:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-[92vw] sm:max-w-sm rounded-3xl p-5 sm:p-6 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-              <h3 className="font-bold text-sm text-slate-900">Bantuan Pendaftaran</h3>
-              <button onClick={() => setShowHelpModal(false)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            <div className="text-xs text-slate-600 space-y-2">
-              <p>Pendaftaran lomba dibuka dari tanggal <b>30 Juli sampai 6 Agustus 2026</b>.</p>
-              <p>Jika memerlukan bantuan manual, silakan hubungi WhatsApp panitia:</p>
-              <div className="space-y-1.5 pt-1">
-                <a
-                  href="https://wa.me/6285697771178"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2.5 bg-emerald-50 text-emerald-950 font-semibold rounded-xl block text-center"
-                >
-                  💬 Safira: 0856-9777-1178
-                </a>
-                <a
-                  href="https://wa.me/6287882063197"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2.5 bg-emerald-50 text-emerald-950 font-semibold rounded-xl block text-center"
-                >
-                  💬 Aqhila: 0878-8206-3197
-                </a>
-              </div>
-            </div>
-
-            <button
-              onClick={() => setShowHelpModal(false)}
-              className="w-full py-2.5 bg-slate-900 text-white font-bold text-xs rounded-xl cursor-pointer"
-            >
-              Tutup
-            </button>
           </div>
         </div>
       )}

@@ -71,7 +71,7 @@ export const AGE_GROUPS: AgeGroup[] = [
     coloringCat: 'Lomba Mewarnai SD Kelas 1–3 (Sabtu, 15 Ags)',
     fashionCat: 'Fashion Show Nusantara Usia 7–11 Thn (Senin, 17 Ags)',
     dexterityList: [
-      'Lomba Balon (Minggu, 9 Ags)',
+      'Lomba Lari dengan Balon (Minggu, 9 Ags)',
       'Pindahkan Air dengan Sedotan (Minggu, 9 Ags)',
       'Estafet Gelas dengan Jepitan Baju (Minggu, 9 Ags)'
     ]
