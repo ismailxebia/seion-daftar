@@ -865,42 +865,55 @@ export default function RegistrationPlatform() {
         {activeTab === 'register' && (
           <div className="relative z-10 space-y-4 pt-1">
 
-            {/* SEGMENTED TABS CARD (Node 237:734) */}
-            <div className="bg-white/95 backdrop-blur-md border border-[#f0f0f0] p-[3px] rounded-full shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] flex items-center gap-[4px] w-full">
-              <button
-                type="button"
-                onClick={() => setFormType('children')}
-                className={`flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${formType === 'children'
-                    ? 'bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] text-[#020617] font-medium shadow-xs'
-                    : 'bg-transparent text-[#475569] hover:text-slate-900 font-medium'
-                  }`}
-              >
-                Anak & Remaja
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormType('adults')}
-                className={`flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${formType === 'adults'
-                    ? 'bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] text-[#020617] font-medium shadow-xs'
-                    : 'bg-transparent text-[#475569] hover:text-slate-900 font-medium'
-                  }`}
-              >
-                Dewasa/Pasutri
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormType('performers')}
-                className={`flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${formType === 'performers'
-                    ? 'bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] text-[#020617] font-medium shadow-xs'
-                    : 'bg-transparent text-[#475569] hover:text-slate-900 font-medium'
-                  }`}
-              >
-                Pengisi Acara
-              </button>
+            {/* EMBEDDED CATEGORY TABS (Node 237:716) */}
+            <div className="relative z-10 bg-white border border-slate-200/80 rounded-full p-[3px] shadow-[0_4px_20px_rgb(0,0,0,0.03)] flex items-center justify-between gap-1 mb-3">
+              {[
+                { id: 'children', label: 'Anak & Remaja' },
+                { id: 'adults', label: 'Dewasa/Pasutri' },
+                { id: 'performers', label: 'Pengisi Acara' }
+              ].map((tab) => {
+                const isActive = formType === tab.id;
+                return (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setFormType(tab.id as 'children' | 'adults' | 'performers')}
+                    className="relative flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-colors cursor-pointer flex items-center justify-center whitespace-nowrap select-none z-10"
+                  >
+                    {isActive && (
+                      <motion.div
+                        layoutId="activeSubTabBg"
+                        className="absolute inset-0 bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] rounded-full shadow-xs -z-10"
+                        transition={{
+                          type: 'tween',
+                          ease: [0.16, 1, 0.3, 1], // Cubic-bezier easing for smooth interpolation
+                          duration: 0.35
+                        }}
+                      />
+                    )}
+                    <span className={`transition-colors duration-200 ${isActive ? 'text-[#020617] font-semibold' : 'text-[#475569] hover:text-slate-900 font-medium'}`}>
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
 
             {/* MAIN FORM CARD (Node 237:741) */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden">
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={formType}
+                  initial={{ opacity: 0, y: 10, filter: 'blur(2px)' }}
+                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                  exit={{ opacity: 0, y: -10, filter: 'blur(2px)' }}
+                  transition={{
+                    type: 'tween',
+                    ease: [0.16, 1, 0.3, 1], // Smooth cubic-bezier interpolation
+                    duration: 0.28
+                  }}
+                  className="space-y-5"
+                >
 
               {/* 1. FORM ANAK & REMAJA */}
               {formType === 'children' && (
@@ -1558,7 +1571,8 @@ export default function RegistrationPlatform() {
                   </button>
                 </form>
               )}
-
+            </motion.div>
+          </AnimatePresence>
             </div>
 
             {/* CARE TEAM SECTION */}
