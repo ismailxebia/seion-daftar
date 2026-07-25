@@ -530,11 +530,11 @@ export default function RegistrationPlatform() {
       {/* MAIN CONTENT AREA */}
       <main className="print:hidden max-w-xl mx-auto px-4 pt-3 space-y-5">
 
-        {/* HERO BANNER WITH BACKGROUND IMAGE & PRECISION FIGMA TABS (Node 237:734) */}
-        <div className="relative bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] overflow-hidden space-y-5">
-          {/* Background Image positioned on right with soft fade gradient */}
+        {/* 1. TOP HERO BANNER CARD (Node 237:710) */}
+        <div className="relative bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] overflow-hidden">
+          {/* Right Background Image clipped inside Top Hero Card */}
           <div 
-            className="absolute top-0 right-0 bottom-0 w-full sm:w-[65%] bg-cover bg-right bg-no-repeat pointer-events-none z-0 opacity-95"
+            className="absolute top-0 right-0 bottom-0 w-full sm:w-[60%] bg-cover bg-right bg-no-repeat pointer-events-none z-0 opacity-95"
             style={{ backgroundImage: `url('/bg-seion-lomba.png')` }}
           >
             {/* Soft fade overlay from white on left to transparent on right */}
@@ -557,9 +557,13 @@ export default function RegistrationPlatform() {
               </p>
             </div>
           </div>
+        </div>
 
-          {/* FIGMA PRECISION SEGMENTED TABS */}
-          <div className="relative z-10 pt-1">
+        {/* TAB 1: FORM PENDAFTARAN */}
+        {activeTab === 'register' && (
+          <div className="space-y-4">
+
+            {/* 2. SEGMENTED TABS OUTSIDE HERO CARD (Node 237:734) */}
             <div className="bg-white border border-[#f0f0f0] p-[3px] rounded-full shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] flex items-center gap-[4px] w-full">
               <button
                 type="button"
@@ -595,13 +599,8 @@ export default function RegistrationPlatform() {
                 Pengisi Acara
               </button>
             </div>
-          </div>
-        </div>
 
-        {/* TAB 1: FORM PENDAFTARAN */}
-        {activeTab === 'register' && (
-          <div className="space-y-4">
-            {/* MAIN FORM CARD */}
+            {/* 3. MAIN FORM CARD OUTSIDE TABS (Node 237:741) */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
               
               {/* 1. FORM ANAK & REMAJA */}
