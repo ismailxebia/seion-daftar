@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=42dot+Sans:wght@300;400;500;600;700;800&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,7 +12,7 @@
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+  font-family: '42dot Sans', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 /* --- PRINT STYLESHEET FOR CLEAN PDF & PRINT OUTPUT --- */

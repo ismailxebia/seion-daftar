@@ -396,7 +396,7 @@ export default function RegistrationPlatform() {
   const formattedToday = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#FAFBF8] text-slate-800 font-sans antialiased selection:bg-[#D2F54E] selection:text-slate-900 pb-32">
+    <div className="min-h-screen bg-[#FAFBF8] text-slate-800 font-sans antialiased selection:bg-[#D2F54E] selection:text-slate-900 pb-20">
       
       <style jsx global>{`
         @media screen {
@@ -488,40 +488,42 @@ export default function RegistrationPlatform() {
       {/* WEB DASHBOARD UI (VISIBLE ON SCREEN, HIDDEN ON PRINT/PDF) */}
       {/* ---------------------------------------------------- */}
       
-      {/* MAIN CONTENT AREA */}
-      <main className="print:hidden max-w-xl mx-auto px-4 pt-6 space-y-5">
+      {/* MAIN CONTENT AREA WITH ABSOLUTE SECTION BACKGROUND IMAGE */}
+      <main className="print:hidden max-w-xl mx-auto px-4 pt-4 pb-2 relative">
+        
+        {/* ABSOLUTE SECTION BACKGROUND IMAGE (Node 237:856) */}
+        <div 
+          className="absolute top-0 right-0 w-[85%] sm:w-[70%] h-[340px] bg-cover bg-right bg-no-repeat pointer-events-none z-0 overflow-hidden"
+          style={{ backgroundImage: `url('/bg-seion-lomba.png')` }}
+        >
+          {/* Soft fade overlay to page background color #FAFBF8 */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#FAFBF8] via-[#FAFBF8]/80 to-transparent" />
+          <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-b from-transparent to-[#FAFBF8]" />
+        </div>
 
-        {/* 1. TOP HERO BANNER CARD WITH BACKGROUND IMAGE & SEGMENTED TABS INSIDE */}
-        <div className="relative bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] overflow-hidden space-y-6">
-          {/* Background Image positioned absolute on top right inside card */}
-          <div 
-            className="absolute top-0 right-0 bottom-0 w-full sm:w-[65%] bg-cover bg-right bg-no-repeat pointer-events-none z-0 opacity-95"
-            style={{ backgroundImage: `url('/bg-seion-lomba.png')` }}
-          >
-            {/* Soft fade overlay to white on left */}
-            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent" />
+        {/* HERO TEXT (TRANSPARENT ON PAGE) */}
+        <div className="relative z-10 pt-3 pb-3 space-y-2 max-w-sm sm:max-w-md">
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-xs text-slate-700 rounded-full text-xs font-normal border border-slate-200/80 shadow-2xs">
+            <span className="w-2 h-2 rounded-full bg-[#83DF22] inline-block shrink-0" />
+            <span>Formulir Pendaftaran</span>
           </div>
 
-          {/* Header Content */}
-          <div className="relative z-10 space-y-2 max-w-sm sm:max-w-md">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100/90 backdrop-blur-xs text-slate-700 rounded-full text-xs font-normal border border-slate-200/60">
-              <span className="w-2 h-2 rounded-full bg-[#83DF22] inline-block shrink-0" />
-              <span>Formulir Pendaftaran</span>
-            </div>
-
-            <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
-                Semarak Lomba Kemerdekaan Seion
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
-                Batas pendaftaran : 6 Agu 2026
-              </p>
-            </div>
+          <div>
+            <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+              Semarak Lomba Kemerdekaan Seion
+            </h2>
+            <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+              Batas pendaftaran : 6 Agu 2026
+            </p>
           </div>
+        </div>
 
-          {/* FIGMA PRECISION SEGMENTED TABS INSIDE HERO CARD */}
-          <div className="relative z-10 pt-1">
-            <div className="bg-white border border-[#f0f0f0] p-[3px] rounded-full shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] flex items-center gap-[4px] w-full">
+        {/* TAB 1: FORM PENDAFTARAN */}
+        {activeTab === 'register' && (
+          <div className="relative z-10 space-y-4 pt-1">
+
+            {/* SEGMENTED TABS CARD (Node 237:734) */}
+            <div className="bg-white/95 backdrop-blur-md border border-[#f0f0f0] p-[3px] rounded-full shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] flex items-center gap-[4px] w-full">
               <button
                 type="button"
                 onClick={() => setFormType('children')}
@@ -556,14 +558,8 @@ export default function RegistrationPlatform() {
                 Pengisi Acara
               </button>
             </div>
-          </div>
-        </div>
 
-        {/* TAB 1: FORM PENDAFTARAN */}
-        {activeTab === 'register' && (
-          <div className="space-y-4">
-
-            {/* 3. MAIN FORM CARD OUTSIDE TABS (Node 237:741) */}
+            {/* MAIN FORM CARD (Node 237:741) */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
               
               {/* 1. FORM ANAK & REMAJA */}
@@ -576,7 +572,7 @@ export default function RegistrationPlatform() {
 
                   {/* FIELD 1: Nama Lengkap Anak */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
                       Nama Lengkap Anak <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -585,13 +581,13 @@ export default function RegistrationPlatform() {
                       value={childData.namaAnak}
                       onChange={(e) => setChildData({ ...childData, namaAnak: e.target.value })}
                       placeholder="e.g. Helmi"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                     />
                   </div>
 
                   {/* FIELD 2: DROPDOWN CUSTOM TINGKATAN SEKOLAH DENGAN ANIMASI CASCADE & ICON LINE */}
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
                       Tingkatan Sekolah <span className="text-rose-500">*</span>
                     </label>
 
@@ -599,9 +595,9 @@ export default function RegistrationPlatform() {
                       <button
                         type="button"
                         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={`w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] hover:bg-slate-100/80 border ${
-                          isDropdownOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30 bg-white' : 'border-slate-200'
-                        } rounded-2xl font-normal text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                        className={`w-full h-[42px] px-[17px] bg-white border ${
+                          isDropdownOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                        } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
                       >
                         {selectedGroupObj ? (
                           <div className="flex items-center gap-2.5">
@@ -609,9 +605,9 @@ export default function RegistrationPlatform() {
                             <span className="font-normal text-slate-900">{selectedGroupObj.label}</span>
                           </div>
                         ) : (
-                          <span className="font-normal text-slate-400">-- Pilih Tingkatan Sekolah --</span>
+                          <span className="font-normal text-[#94a3b8]">-- Pilih Tingkatan Sekolah --</span>
                         )}
-                        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                        <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-slate-700' : ''}`} />
                       </button>
 
                       {/* DROPDOWN POPUP MENU WITH CASCADE ANIMATION */}
@@ -759,7 +755,7 @@ export default function RegistrationPlatform() {
                   {/* FIELD 4: Kontak Orang Tua & Rumah */}
                   <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         Blok / No. Rumah <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -768,11 +764,11 @@ export default function RegistrationPlatform() {
                         value={childData.blokRumah}
                         onChange={(e) => setChildData({ ...childData, blokRumah: e.target.value })}
                         placeholder="B9 No. 12"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         Nama Orang Tua <span className="text-slate-400 font-normal">(Opsional)</span>
                       </label>
                       <input
@@ -780,11 +776,11 @@ export default function RegistrationPlatform() {
                         value={childData.namaOrangTua}
                         onChange={(e) => setChildData({ ...childData, namaOrangTua: e.target.value })}
                         placeholder="Ayah / Ibu"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
                       </label>
                       <input
@@ -792,7 +788,7 @@ export default function RegistrationPlatform() {
                         value={childData.whatsapp}
                         onChange={(e) => setChildData({ ...childData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                   </div>
@@ -819,7 +815,7 @@ export default function RegistrationPlatform() {
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         Nama Peserta / Pasangan <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -828,11 +824,11 @@ export default function RegistrationPlatform() {
                         value={adultData.namaPeserta}
                         onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
                         placeholder="e.g. Pak Hendra & Bu Ani / Pak Budi"
-                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         Blok / Rumah <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -841,7 +837,7 @@ export default function RegistrationPlatform() {
                         value={adultData.blokRumah}
                         onChange={(e) => setAdultData({ ...adultData, blokRumah: e.target.value })}
                         placeholder="B10 No. 5"
-                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                   </div>
@@ -885,7 +881,7 @@ export default function RegistrationPlatform() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
                       No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
                     </label>
                     <input
@@ -893,7 +889,7 @@ export default function RegistrationPlatform() {
                       value={adultData.whatsapp}
                       onChange={(e) => setAdultData({ ...adultData, whatsapp: e.target.value })}
                       placeholder="0812xxxxxxx"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                     />
                   </div>
 
@@ -908,37 +904,37 @@ export default function RegistrationPlatform() {
                 </form>
               )}
 
-              {/* 3. FORM PENGISI ACARA / MC */}
+              {/* 3. FORM PENGISI ACARA */}
               {formType === 'performers' && (
                 <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
                   <div className="pb-3 border-b border-slate-100">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">OPEN REGISTRASI</span>
-                    <h3 className="text-base font-bold text-slate-900">Pengisi Acara / MC Malam Puncak (17 Ags)</h3>
+                    <h3 className="text-base font-bold text-slate-900">Pengisi Acara Malam Puncak (17 Ags)</h3>
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1.5">
-                      Nama Penampil / MC / Kelompok <span className="text-rose-500">*</span>
+                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                      Nama Penampil / Kelompok <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
                       required
                       value={performerData.namaPenampil}
                       onChange={(e) => setPerformerData({ ...performerData, namaPenampil: e.target.value })}
-                      placeholder="e.g. Sanggar Tari Mizu / Andi Vocalist / MC Bu Anita"
-                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                      placeholder="e.g. Sanggar Tari Mizu / Andi Vocalist / Bu Anita"
+                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Jenis Penampilan</label>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Jenis Penampilan</label>
                       <select
                         value={performerData.jenisPenampilan}
                         onChange={(e) => setPerformerData({ ...performerData, jenisPenampilan: e.target.value })}
-                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer font-normal text-slate-800"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none cursor-pointer font-normal text-[14px] text-slate-800"
                       >
-                        <option value="MC / Pembawa Acara">MC / Pembawa Acara</option>
+                        <option value="Pembawa Acara">Pembawa Acara</option>
                         <option value="Menyanyi">Menyanyi</option>
                         <option value="Menari">Menari</option>
                         <option value="Puisi/Drama">Puisi / Drama</option>
@@ -947,11 +943,11 @@ export default function RegistrationPlatform() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Kategori</label>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Kategori</label>
                       <select
                         value={performerData.tipe}
                         onChange={(e) => setPerformerData({ ...performerData, tipe: e.target.value })}
-                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer font-normal text-slate-800"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none cursor-pointer font-normal text-[14px] text-slate-800"
                       >
                         <option value="Individu">Individu (Solo)</option>
                         <option value="Kelompok">Kelompok / Grup</option>
@@ -959,20 +955,20 @@ export default function RegistrationPlatform() {
                     </div>
 
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">Jumlah Anggota</label>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Jumlah Anggota</label>
                       <input
                         type="number"
                         min="1"
                         value={performerData.jumlahOrang}
                         onChange={(e) => setPerformerData({ ...performerData, jumlahOrang: e.target.value })}
-                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         Blok / Rumah <span className="text-rose-500">*</span>
                       </label>
                       <input
@@ -981,11 +977,11 @@ export default function RegistrationPlatform() {
                         value={performerData.blokRumah}
                         onChange={(e) => setPerformerData({ ...performerData, blokRumah: e.target.value })}
                         placeholder="B9 No. 3"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold text-slate-700 mb-1.5">
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
                       </label>
                       <input
@@ -993,7 +989,7 @@ export default function RegistrationPlatform() {
                         value={performerData.whatsapp}
                         onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
-                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-normal text-slate-800 placeholder:font-normal placeholder:text-slate-400"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
                     </div>
                   </div>
@@ -1004,7 +1000,7 @@ export default function RegistrationPlatform() {
                     className="w-full py-3.5 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Daftar Pengisi Acara / MC
+                    Daftar Pengisi Acara
                   </button>
                 </form>
               )}
