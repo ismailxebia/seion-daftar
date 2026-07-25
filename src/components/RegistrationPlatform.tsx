@@ -517,28 +517,70 @@ export default function RegistrationPlatform() {
       {/* MAIN CONTENT AREA */}
       <main className="print:hidden max-w-xl mx-auto px-4 pt-3 space-y-5">
 
-        {/* HERO PASTEL BANNER */}
-        <div className="bg-gradient-to-br from-[#E6F7D9] via-[#F1FCE7] to-[#F7FDED] border border-[#D3F2BA] rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3 relative">
-          <div>
-            <span className="inline-block px-2.5 py-0.5 bg-[#83DF22] text-slate-950 font-extrabold text-[10px] rounded-full uppercase tracking-wider mb-1.5">
-              Formulir Pendaftaran
-            </span>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-              Semarak Lomba Kemerdekaan Seion
-            </h2>
-            <p className="text-xs text-slate-600 mt-1">
-              Isi data diri di bawah ini. Pilih tingkatan sekolah untuk melihat cabang lomba yang tersedia.
-            </p>
+        {/* HERO BANNER WITH BACKGROUND IMAGE & PRECISION FIGMA TABS (Node 237:734) */}
+        <div className="relative bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] overflow-hidden space-y-5">
+          {/* Background Image positioned on right with soft fade gradient */}
+          <div 
+            className="absolute top-0 right-0 bottom-0 w-full sm:w-[65%] bg-cover bg-right bg-no-repeat pointer-events-none z-0 opacity-95"
+            style={{ backgroundImage: `url('/bg-seion-lomba.png')` }}
+          >
+            {/* Soft fade overlay from white on left to transparent on right */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent" />
           </div>
 
-          <div className="pt-1 flex flex-wrap gap-2 text-xs text-slate-700">
-            <div className="bg-white/80 px-2.5 py-1 rounded-xl border border-[#C5EBA1] flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-              <span>9, 15, 16 & 17 Ags 2026</span>
+          {/* Header Content */}
+          <div className="relative z-10 space-y-2 max-w-sm sm:max-w-md">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100/90 backdrop-blur-xs text-slate-700 rounded-full text-xs font-normal border border-slate-200/60">
+              <span className="w-2 h-2 rounded-full bg-[#83DF22] inline-block shrink-0" />
+              <span>Formulir Pendaftaran</span>
             </div>
-            <div className="bg-white/80 px-2.5 py-1 rounded-xl border border-[#C5EBA1] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
-              <span>Batas: 6 Ags 2026</span>
+
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-900 tracking-tight leading-snug">
+                Semarak Lomba Kemerdekaan Seion
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-500 font-normal mt-1">
+                Batas pendaftaran : 6 Agu 2026
+              </p>
+            </div>
+          </div>
+
+          {/* FIGMA PRECISION SEGMENTED TABS */}
+          <div className="relative z-10 pt-1">
+            <div className="bg-white border border-[#f0f0f0] p-[3px] rounded-full shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] flex items-center gap-[4px] w-full">
+              <button
+                type="button"
+                onClick={() => setFormType('children')}
+                className={`flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${
+                  formType === 'children'
+                    ? 'bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] text-[#020617] font-medium shadow-xs'
+                    : 'bg-transparent text-[#475569] hover:text-slate-900 font-medium'
+                }`}
+              >
+                Anak & Remaja
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormType('adults')}
+                className={`flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${
+                  formType === 'adults'
+                    ? 'bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] text-[#020617] font-medium shadow-xs'
+                    : 'bg-transparent text-[#475569] hover:text-slate-900 font-medium'
+                }`}
+              >
+                Dewasa/Pasutri
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormType('performers')}
+                className={`flex-1 h-[38px] px-3 text-xs sm:text-sm rounded-full transition-all cursor-pointer flex items-center justify-center whitespace-nowrap ${
+                  formType === 'performers'
+                    ? 'bg-gradient-to-b from-[#d2f54e] to-[#bcdb46] text-[#020617] font-medium shadow-xs'
+                    : 'bg-transparent text-[#475569] hover:text-slate-900 font-medium'
+                }`}
+              >
+                Pengisi Acara
+              </button>
             </div>
           </div>
         </div>
@@ -546,44 +588,6 @@ export default function RegistrationPlatform() {
         {/* TAB 1: FORM PENDAFTARAN */}
         {activeTab === 'register' && (
           <div className="space-y-4">
-            
-            {/* SEGMENTED FORM TYPE SELECTOR */}
-            <div className="bg-white p-1 rounded-2xl border border-slate-200/80 shadow-2xs flex gap-1 overflow-x-auto">
-              <button
-                type="button"
-                onClick={() => setFormType('children')}
-                className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                  formType === 'children'
-                    ? 'bg-[#D2F54E] text-slate-950 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                👶 Anak & Remaja
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormType('adults')}
-                className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                  formType === 'adults'
-                    ? 'bg-[#D2F54E] text-slate-950 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                👩‍❤️‍👨 Dewasa/Pasutri
-              </button>
-              <button
-                type="button"
-                onClick={() => setFormType('performers')}
-                className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
-                  formType === 'performers'
-                    ? 'bg-[#D2F54E] text-slate-950 shadow-2xs font-bold'
-                    : 'text-slate-600 hover:bg-slate-50'
-                }`}
-              >
-                🎤 Pengisi Acara (MC)
-              </button>
-            </div>
-
             {/* MAIN FORM CARD */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
               
