@@ -488,62 +488,23 @@ export default function RegistrationPlatform() {
       {/* WEB DASHBOARD UI (VISIBLE ON SCREEN, HIDDEN ON PRINT/PDF) */}
       {/* ---------------------------------------------------- */}
       
-      {/* HEADER BAR */}
-      <header className="print:hidden max-w-xl mx-auto px-4 pt-5 pb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-slate-900 text-[#D2F54E] flex items-center justify-center font-black text-xs shadow-xs shrink-0">
-            🇮🇩
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-none">
-              Portal Seion 2026
-            </h1>
-            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">HUT RI Ke-81 Cluster Mizu & B9–B10</p>
-          </div>
-        </div>
-
-        {/* ADMIN ACCESS BUTTON */}
-        {isAdminUnlocked ? (
-          <button
-            onClick={handleAdminLogout}
-            className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white rounded-full text-xs font-semibold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
-            title="Keluar dari mode admin"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-[#D2F54E]" />
-            <span>Admin (Keluar)</span>
-          </button>
-        ) : (
-          <button
-            onClick={() => {
-              setPinError('');
-              setPinInput('');
-              setShowPinModal(true);
-            }}
-            className="px-3 py-1.5 bg-[#D2F54E] hover:bg-[#bce43a] text-slate-950 rounded-full text-xs font-semibold shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
-          >
-            <Lock className="w-3.5 h-3.5 text-slate-900" />
-            <span>Akses Admin</span>
-          </button>
-        )}
-      </header>
-
       {/* MAIN CONTENT AREA */}
-      <main className="print:hidden max-w-xl mx-auto px-4 pt-3 space-y-5">
+      <main className="print:hidden max-w-xl mx-auto px-4 pt-6 space-y-5">
 
-        {/* 1. TOP HERO HEADER (NO CARD CONTAINER, TRANSPARENT ON PAGE BACKGROUND) */}
-        <div className="relative py-2 sm:py-3 px-1 overflow-hidden">
-          {/* Background Image positioned on top right fading to #FAFBF8 */}
+        {/* 1. TOP HERO BANNER CARD WITH BACKGROUND IMAGE & SEGMENTED TABS INSIDE */}
+        <div className="relative bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_4px_20px_rgb(0,0,0,0.03)] overflow-hidden space-y-6">
+          {/* Background Image positioned absolute on top right inside card */}
           <div 
-            className="absolute top-0 right-0 bottom-0 w-full sm:w-[60%] bg-cover bg-right bg-no-repeat pointer-events-none z-0 opacity-95"
+            className="absolute top-0 right-0 bottom-0 w-full sm:w-[65%] bg-cover bg-right bg-no-repeat pointer-events-none z-0 opacity-95"
             style={{ backgroundImage: `url('/bg-seion-lomba.png')` }}
           >
-            {/* Soft fade overlay to page background color #FAFBF8 */}
-            <div className="absolute inset-0 bg-gradient-to-r from-[#FAFBF8] via-[#FAFBF8]/80 to-transparent" />
+            {/* Soft fade overlay to white on left */}
+            <div className="absolute inset-0 bg-gradient-to-r from-white via-white/80 to-transparent" />
           </div>
 
           {/* Header Content */}
           <div className="relative z-10 space-y-2 max-w-sm sm:max-w-md">
-            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/90 backdrop-blur-xs text-slate-700 rounded-full text-xs font-normal border border-slate-200/80 shadow-2xs">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-slate-100/90 backdrop-blur-xs text-slate-700 rounded-full text-xs font-normal border border-slate-200/60">
               <span className="w-2 h-2 rounded-full bg-[#83DF22] inline-block shrink-0" />
               <span>Formulir Pendaftaran</span>
             </div>
@@ -557,13 +518,9 @@ export default function RegistrationPlatform() {
               </p>
             </div>
           </div>
-        </div>
 
-        {/* TAB 1: FORM PENDAFTARAN */}
-        {activeTab === 'register' && (
-          <div className="space-y-4">
-
-            {/* 2. SEGMENTED TABS OUTSIDE HERO CARD (Node 237:734) */}
+          {/* FIGMA PRECISION SEGMENTED TABS INSIDE HERO CARD */}
+          <div className="relative z-10 pt-1">
             <div className="bg-white border border-[#f0f0f0] p-[3px] rounded-full shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] flex items-center gap-[4px] w-full">
               <button
                 type="button"
@@ -599,6 +556,12 @@ export default function RegistrationPlatform() {
                 Pengisi Acara
               </button>
             </div>
+          </div>
+        </div>
+
+        {/* TAB 1: FORM PENDAFTARAN */}
+        {activeTab === 'register' && (
+          <div className="space-y-4">
 
             {/* 3. MAIN FORM CARD OUTSIDE TABS (Node 237:741) */}
             <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
