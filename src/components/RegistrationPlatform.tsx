@@ -671,9 +671,7 @@ export default function RegistrationPlatform() {
                                   }`}
                                 >
                                   <div className="flex items-center gap-3">
-                                    <div className={`p-1.5 rounded-lg ${isSelected ? 'bg-[#83DF22] text-slate-950' : 'bg-slate-100 text-slate-500'}`}>
-                                      {renderGroupIcon(group.id, `w-4 h-4 ${isSelected ? 'text-slate-950' : 'text-slate-600'}`)}
-                                    </div>
+                                    {renderGroupIcon(group.id, `w-4.5 h-4.5 shrink-0 ${isSelected ? 'text-slate-950' : 'text-slate-600'}`)}
                                     <span className="font-normal">{group.label}</span>
                                   </div>
                                   {isSelected && (
