@@ -906,7 +906,6 @@ export default function RegistrationPlatform() {
               {formType === 'children' && (
                 <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
                   <div className="pb-3 border-b border-slate-100">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">LANGKAH 1 DARI 2</span>
                     <h3 className="text-base font-bold text-slate-900">Data Peserta Anak</h3>
                   </div>
 
@@ -920,7 +919,7 @@ export default function RegistrationPlatform() {
                       required
                       value={childData.namaAnak}
                       onChange={(e) => setChildData({ ...childData, namaAnak: e.target.value })}
-                      placeholder="e.g. Helmi"
+                      placeholder="Nama Lengkap Anak"
                       className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                     />
                   </div>
@@ -1397,7 +1396,6 @@ export default function RegistrationPlatform() {
               {formType === 'performers' && (
                 <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
                   <div className="pb-3 border-b border-slate-100">
-                    <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">OPEN REGISTRASI</span>
                     <h3 className="text-base font-bold text-slate-900">Pengisi Acara Malam Puncak (17 Ags)</h3>
                   </div>
 
