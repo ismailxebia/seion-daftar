@@ -279,6 +279,15 @@ export default function RegistrationPlatform() {
     e.preventDefault();
     setLoading(true);
 
+    const effectiveHouseBlock = globalHouseBlock.trim() || (typeof window !== 'undefined' ? localStorage.getItem('seion_user_house_block') || '' : '');
+    if (!effectiveHouseBlock) {
+      setLoading(false);
+      setHouseModalMode('welcome');
+      setIsHouseModalOpen(true);
+      alert("Silakan isi Blok & Nomor Rumah terlebih dahulu!");
+      return;
+    }
+
     const code = 'SEION-' + Math.floor(10000 + Math.random() * 90000);
     const payloadsToSave: Omit<RegistrationParticipant, 'id'>[] = [];
 
@@ -286,7 +295,6 @@ export default function RegistrationPlatform() {
       if (!childData.namaAnak.trim()) { alert("Nama anak wajib diisi!"); setLoading(false); return; }
       if (!childData.tingkatanId) { alert("Tingkatan sekolah wajib dipilih!"); setLoading(false); return; }
       if (childData.selectedLomba.length === 0) { alert("Pilih minimal 1 lomba!"); setLoading(false); return; }
-      if (!childData.blokRumah.trim()) { alert("Blok / No. Rumah wajib diisi!"); setLoading(false); return; }
 
       const selectedCatObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
 
@@ -297,12 +305,11 @@ export default function RegistrationPlatform() {
         lomba: childData.selectedLomba,
         namaOrangTua: childData.namaOrangTua.trim() || '-',
         whatsapp: childData.whatsapp.trim() || '-',
-        blokRumah: childData.blokRumah.trim(),
+        blokRumah: effectiveHouseBlock,
         code: code,
         createdAt: serverTimestamp()
       });
     } else if (formType === 'adults') {
-      if (!adultData.blokRumah.trim()) { alert("Blok / No. Rumah wajib diisi!"); setLoading(false); return; }
       if (!adultData.namaPeserta.trim()) { alert("Nama lengkap wajib diisi!"); setLoading(false); return; }
       if (adultData.hasSpouse && !adultData.namaPasangan.trim()) {
         const spouseLabel = adultData.role === 'Ibu-Ibu' ? 'Suami' : 'Istri';
@@ -350,7 +357,7 @@ export default function RegistrationPlatform() {
             kategoriGroup: 'Lomba Pasutri',
             lomba: pasutriLomba,
             whatsapp: adultData.whatsapp.trim() || '-',
-            blokRumah: adultData.blokRumah.trim(),
+            blokRumah: effectiveHouseBlock,
             code: `${code}-P`,
             createdAt: serverTimestamp()
           });
@@ -367,7 +374,7 @@ export default function RegistrationPlatform() {
             kategoriGroup: 'Lomba Bapak-Bapak',
             lomba: bapakLomba,
             whatsapp: adultData.whatsapp.trim() || '-',
-            blokRumah: adultData.blokRumah.trim(),
+            blokRumah: effectiveHouseBlock,
             code: `${code}-B`,
             createdAt: serverTimestamp()
           });
@@ -384,7 +391,7 @@ export default function RegistrationPlatform() {
             kategoriGroup: 'Lomba Ibu-Ibu',
             lomba: ibuLomba,
             whatsapp: adultData.whatsapp.trim() || '-',
-            blokRumah: adultData.blokRumah.trim(),
+            blokRumah: effectiveHouseBlock,
             code: `${code}-I`,
             createdAt: serverTimestamp()
           });
@@ -401,14 +408,13 @@ export default function RegistrationPlatform() {
           kategoriGroup: `Dewasa (${adultData.role})`,
           lomba: cleanLombaList,
           whatsapp: adultData.whatsapp.trim() || '-',
-          blokRumah: adultData.blokRumah.trim(),
+          blokRumah: effectiveHouseBlock,
           code: code,
           createdAt: serverTimestamp()
         });
       }
     } else if (formType === 'performers') {
       if (!performerData.namaPenampil.trim()) { alert("Nama penampil wajib diisi!"); setLoading(false); return; }
-      if (!performerData.blokRumah.trim()) { alert("Blok / No. Rumah wajib diisi!"); setLoading(false); return; }
 
       payloadsToSave.push({
         type: 'Pengisi Acara (Malam Puncak)',
@@ -416,7 +422,7 @@ export default function RegistrationPlatform() {
         kategoriGroup: `Pengisi Acara (${performerData.jenisPenampilan})`,
         lomba: [`Pengisi Acara: ${performerData.jenisPenampilan} (${performerData.tipe} - ${performerData.jumlahOrang} Orang)`],
         whatsapp: performerData.whatsapp.trim() || '-',
-        blokRumah: performerData.blokRumah.trim(),
+        blokRumah: effectiveHouseBlock,
         code: code,
         createdAt: serverTimestamp()
       });
