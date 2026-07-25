@@ -371,7 +371,7 @@ export default function RegistrationPlatform() {
   const formattedToday = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 
   return (
-    <div className="min-h-screen bg-[#FAFBF8] text-slate-800 font-sans antialiased selection:bg-[#D2F54E] selection:text-slate-900 pb-28">
+    <div className="min-h-screen bg-[#FAFBF8] text-slate-800 font-sans antialiased selection:bg-[#D2F54E] selection:text-slate-900 pb-32">
       
       {/* ---------------------------------------------------- */}
       {/* PRINT-ONLY OFFICIAL REPORT LAYOUT (HIDDEN ON SCREEN, VISIBLE ON PRINT/PDF) */}
@@ -453,20 +453,20 @@ export default function RegistrationPlatform() {
       {/* HEADER BAR */}
       <header className="print:hidden max-w-xl mx-auto px-4 pt-5 pb-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-full bg-slate-900 text-[#D2F54E] flex items-center justify-center font-black text-xs shadow-xs">
+          <div className="w-8 h-8 rounded-full bg-slate-900 text-[#D2F54E] flex items-center justify-center font-black text-xs shadow-xs shrink-0">
             🇮🇩
           </div>
           <div>
-            <h1 className="text-xl font-bold tracking-tight text-slate-900 leading-none">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-slate-900 leading-none">
               Portal Seion 2026
             </h1>
-            <p className="text-xs text-slate-500 mt-0.5">HUT RI Ke-81 Cluster Mizu & B9–B10</p>
+            <p className="text-[11px] sm:text-xs text-slate-500 mt-0.5">HUT RI Ke-81 Cluster Mizu & B9–B10</p>
           </div>
         </div>
 
         <button
           onClick={() => setShowHelpModal(true)}
-          className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full text-xs font-medium shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all"
+          className="px-3 py-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 rounded-full text-xs font-medium shadow-2xs flex items-center gap-1.5 cursor-pointer transition-all shrink-0"
         >
           <HelpCircle className="w-3.5 h-3.5 text-slate-500" /> Bantuan
         </button>
@@ -476,12 +476,12 @@ export default function RegistrationPlatform() {
       <main className="print:hidden max-w-xl mx-auto px-4 pt-3 space-y-5">
 
         {/* HERO PASTEL BANNER */}
-        <div className="bg-gradient-to-br from-[#E6F7D9] via-[#F1FCE7] to-[#F7FDED] border border-[#D3F2BA] rounded-3xl p-5 shadow-2xs space-y-3 relative">
+        <div className="bg-gradient-to-br from-[#E6F7D9] via-[#F1FCE7] to-[#F7FDED] border border-[#D3F2BA] rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3 relative">
           <div>
             <span className="inline-block px-2.5 py-0.5 bg-[#83DF22] text-slate-950 font-extrabold text-[10px] rounded-full uppercase tracking-wider mb-1.5">
               Formulir Pendaftaran
             </span>
-            <h2 className="text-lg font-bold text-slate-900 leading-snug">
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
               Semarak Lomba Kemerdekaan Seion
             </h2>
             <p className="text-xs text-slate-600 mt-1">
@@ -491,11 +491,11 @@ export default function RegistrationPlatform() {
 
           <div className="pt-1 flex flex-wrap gap-2 text-xs text-slate-700">
             <div className="bg-white/80 px-2.5 py-1 rounded-xl border border-[#C5EBA1] flex items-center gap-1.5">
-              <Calendar className="w-3.5 h-3.5 text-emerald-700" />
+              <Calendar className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
               <span>9, 15, 16 & 17 Ags 2026</span>
             </div>
             <div className="bg-white/80 px-2.5 py-1 rounded-xl border border-[#C5EBA1] flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-emerald-700" />
+              <Clock className="w-3.5 h-3.5 text-emerald-700 shrink-0" />
               <span>Batas: 6 Ags 2026</span>
             </div>
           </div>
@@ -506,11 +506,11 @@ export default function RegistrationPlatform() {
           <div className="space-y-4">
             
             {/* SEGMENTED FORM TYPE SELECTOR */}
-            <div className="bg-white p-1.5 rounded-2xl border border-slate-200/80 shadow-2xs flex gap-1">
+            <div className="bg-white p-1 rounded-2xl border border-slate-200/80 shadow-2xs flex gap-1 overflow-x-auto">
               <button
                 type="button"
                 onClick={() => setFormType('children')}
-                className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   formType === 'children'
                     ? 'bg-[#D2F54E] text-slate-950 shadow-2xs font-bold'
                     : 'text-slate-600 hover:bg-slate-50'
@@ -521,7 +521,7 @@ export default function RegistrationPlatform() {
               <button
                 type="button"
                 onClick={() => setFormType('adults')}
-                className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   formType === 'adults'
                     ? 'bg-[#D2F54E] text-slate-950 shadow-2xs font-bold'
                     : 'text-slate-600 hover:bg-slate-50'
@@ -532,7 +532,7 @@ export default function RegistrationPlatform() {
               <button
                 type="button"
                 onClick={() => setFormType('performers')}
-                className={`flex-1 py-2 px-3 text-xs font-semibold rounded-xl transition-all cursor-pointer ${
+                className={`flex-1 py-2 px-2.5 text-xs font-semibold rounded-xl transition-all cursor-pointer whitespace-nowrap ${
                   formType === 'performers'
                     ? 'bg-[#D2F54E] text-slate-950 shadow-2xs font-bold'
                     : 'text-slate-600 hover:bg-slate-50'
@@ -543,11 +543,11 @@ export default function RegistrationPlatform() {
             </div>
 
             {/* MAIN FORM CARD */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] space-y-5">
               
               {/* 1. FORM ANAK & REMAJA */}
               {formType === 'children' && (
-                <form onSubmit={handleSaveRegistration} className="space-y-5">
+                <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
                   <div className="pb-3 border-b border-slate-100">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">LANGKAH 1 DARI 2</span>
                     <h3 className="text-base font-bold text-slate-900">Data Peserta Anak</h3>
@@ -564,7 +564,7 @@ export default function RegistrationPlatform() {
                       value={childData.namaAnak}
                       onChange={(e) => setChildData({ ...childData, namaAnak: e.target.value })}
                       placeholder="e.g. Helmi"
-                      className="w-full px-4 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all"
                     />
                   </div>
 
@@ -581,7 +581,7 @@ export default function RegistrationPlatform() {
                       value={childData.umur}
                       onChange={handleAgeInput}
                       placeholder="Masukkan angka (contoh: 8)"
-                      className="w-full px-4 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl font-bold focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all"
                     />
                   </div>
 
@@ -603,7 +603,7 @@ export default function RegistrationPlatform() {
                         required
                         value={childData.tingkatanId}
                         onChange={handleTingkatanDropdownChange}
-                        className="w-full pl-4 pr-10 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all appearance-none cursor-pointer"
+                        className="w-full pl-4 pr-10 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl font-semibold text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:bg-white transition-all appearance-none cursor-pointer"
                       >
                         <option value="">-- Pilih Tingkatan Sekolah --</option>
                         {AGE_GROUPS.map((group) => (
@@ -642,13 +642,13 @@ export default function RegistrationPlatform() {
                               key={idx}
                               type="button"
                               onClick={() => toggleChildLomba(item)}
-                              className={`w-full p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                              className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
                                 isChecked
                                   ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
                                   : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                               }`}
                             >
-                              <div className="flex items-center gap-3">
+                              <div className="flex items-center gap-2.5 sm:gap-3">
                                 <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                                   isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
                                 }`}>
@@ -665,13 +665,13 @@ export default function RegistrationPlatform() {
                           <button
                             type="button"
                             onClick={() => toggleChildLomba(activeSelectedCategoryObj.coloringCat!)}
-                            className={`w-full p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
                               childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat)
                                 ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
                                 : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
                               <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                                 childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
                               }`}>
@@ -687,13 +687,13 @@ export default function RegistrationPlatform() {
                           <button
                             type="button"
                             onClick={() => toggleChildLomba(activeSelectedCategoryObj.fashionCat!)}
-                            className={`w-full p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
                               childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat)
                                 ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
                                 : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                             }`}
                           >
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-2.5 sm:gap-3">
                               <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                                 childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
                               }`}>
@@ -708,13 +708,13 @@ export default function RegistrationPlatform() {
                         <button
                           type="button"
                           onClick={() => toggleChildLomba('Parade Sepeda Hias (Minggu, 16 Ags)')}
-                          className={`w-full p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
+                          className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-medium flex items-center justify-between transition-all cursor-pointer text-left ${
                             childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)')
                               ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-semibold'
                               : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                           }`}
                         >
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-2.5 sm:gap-3">
                             <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${
                               childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
                             }`}>
@@ -728,7 +728,7 @@ export default function RegistrationPlatform() {
                   </div>
 
                   {/* FIELD 5: Kontak Orang Tua & Rumah */}
-                  <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                         Blok / No. Rumah <span className="text-rose-500">*</span>
@@ -739,7 +739,7 @@ export default function RegistrationPlatform() {
                         value={childData.blokRumah}
                         onChange={(e) => setChildData({ ...childData, blokRumah: e.target.value })}
                         placeholder="B9 No. 12"
-                        className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-bold"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-bold"
                       />
                     </div>
                     <div>
@@ -751,7 +751,7 @@ export default function RegistrationPlatform() {
                         value={childData.namaOrangTua}
                         onChange={(e) => setChildData({ ...childData, namaOrangTua: e.target.value })}
                         placeholder="Ayah / Ibu"
-                        className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
                       />
                     </div>
                     <div>
@@ -763,7 +763,7 @@ export default function RegistrationPlatform() {
                         value={childData.whatsapp}
                         onChange={(e) => setChildData({ ...childData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
-                        className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
                       />
                     </div>
                   </div>
@@ -782,13 +782,13 @@ export default function RegistrationPlatform() {
 
               {/* 2. FORM DEWASA & PASUTRI */}
               {formType === 'adults' && (
-                <form onSubmit={handleSaveRegistration} className="space-y-5">
+                <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
                   <div className="pb-3 border-b border-slate-100">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">FORM DEWASA</span>
                     <h3 className="text-base font-bold text-slate-900">Pendaftaran Lomba Dewasa & Pasutri</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div className="sm:col-span-2">
                       <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                         Nama Peserta / Pasangan <span className="text-rose-500">*</span>
@@ -799,7 +799,7 @@ export default function RegistrationPlatform() {
                         value={adultData.namaPeserta}
                         onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
                         placeholder="e.g. Pak Hendra & Bu Ani / Pak Budi"
-                        className="w-full px-4 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
                       />
                     </div>
                     <div>
@@ -812,7 +812,7 @@ export default function RegistrationPlatform() {
                         value={adultData.blokRumah}
                         onChange={(e) => setAdultData({ ...adultData, blokRumah: e.target.value })}
                         placeholder="B10 No. 5"
-                        className="w-full px-4 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-bold"
+                        className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635] font-bold"
                       />
                     </div>
                   </div>
@@ -823,7 +823,7 @@ export default function RegistrationPlatform() {
                     </label>
 
                     {ADULT_GROUPS.map((group, idx) => (
-                      <div key={idx} className="bg-[#F8F9FA] p-3.5 rounded-2xl border border-slate-200/60 space-y-2">
+                      <div key={idx} className="bg-[#F8F9FA] p-3 sm:p-3.5 rounded-2xl border border-slate-200/60 space-y-2">
                         <h4 className="text-xs font-bold text-slate-700">{group.title}</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                           {group.items.map((item, itemIdx) => {
@@ -864,7 +864,7 @@ export default function RegistrationPlatform() {
                       value={adultData.whatsapp}
                       onChange={(e) => setAdultData({ ...adultData, whatsapp: e.target.value })}
                       placeholder="0812xxxxxxx"
-                      className="w-full px-4 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
                     />
                   </div>
 
@@ -881,7 +881,7 @@ export default function RegistrationPlatform() {
 
               {/* 3. FORM PENGISI ACARA / MC */}
               {formType === 'performers' && (
-                <form onSubmit={handleSaveRegistration} className="space-y-5">
+                <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
                   <div className="pb-3 border-b border-slate-100">
                     <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">OPEN REGISTRASI</span>
                     <h3 className="text-base font-bold text-slate-900">Pengisi Acara / MC Malam Puncak (17 Ags)</h3>
@@ -897,17 +897,17 @@ export default function RegistrationPlatform() {
                       value={performerData.namaPenampil}
                       onChange={(e) => setPerformerData({ ...performerData, namaPenampil: e.target.value })}
                       placeholder="e.g. Sanggar Tari Mizu / Andi Vocalist / MC Bu Anita"
-                      className="w-full px-4 py-3 text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                      className="w-full px-4 py-3 text-base sm:text-sm bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1.5">Jenis Penampilan</label>
                       <select
                         value={performerData.jenisPenampilan}
                         onChange={(e) => setPerformerData({ ...performerData, jenisPenampilan: e.target.value })}
-                        className="w-full px-3 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
                       >
                         <option value="MC / Pembawa Acara">🎙️ MC / Pembawa Acara</option>
                         <option value="Menyanyi">🎤 Menyanyi</option>
@@ -922,7 +922,7 @@ export default function RegistrationPlatform() {
                       <select
                         value={performerData.tipe}
                         onChange={(e) => setPerformerData({ ...performerData, tipe: e.target.value })}
-                        className="w-full px-3 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
+                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none cursor-pointer"
                       >
                         <option value="Individu">Individu (Solo)</option>
                         <option value="Kelompok">Kelompok / Grup</option>
@@ -936,12 +936,12 @@ export default function RegistrationPlatform() {
                         min="1"
                         value={performerData.jumlahOrang}
                         onChange={(e) => setPerformerData({ ...performerData, jumlahOrang: e.target.value })}
-                        className="w-full px-3 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none"
+                        className="w-full px-3 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none"
                       />
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
                     <div>
                       <label className="block text-xs font-semibold text-slate-700 mb-1.5">
                         Blok / Rumah <span className="text-rose-500">*</span>
@@ -952,7 +952,7 @@ export default function RegistrationPlatform() {
                         value={performerData.blokRumah}
                         onChange={(e) => setPerformerData({ ...performerData, blokRumah: e.target.value })}
                         placeholder="B9 No. 3"
-                        className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-bold"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none font-bold"
                       />
                     </div>
                     <div>
@@ -964,7 +964,7 @@ export default function RegistrationPlatform() {
                         value={performerData.whatsapp}
                         onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
-                        className="w-full px-3.5 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none"
+                        className="w-full px-3.5 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-xl focus:outline-none"
                       />
                     </div>
                   </div>
@@ -983,7 +983,7 @@ export default function RegistrationPlatform() {
             </div>
 
             {/* CARE TEAM SECTION */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-5 shadow-2xs space-y-3">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-5 shadow-2xs space-y-3">
               <h3 className="text-sm font-bold text-slate-900">Panitia Pendaftaran (Care Team)</h3>
               <p className="text-xs text-slate-500">Ada pertanyaan? Silakan hubungi tim panitia kami:</p>
               
@@ -1003,7 +1003,7 @@ export default function RegistrationPlatform() {
                         <p className="text-[10px] text-slate-500">{ct.role}</p>
                       </div>
                     </div>
-                    <div className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:bg-[#83DF22] group-hover:border-[#83DF22] group-hover:text-slate-950 transition-colors">
+                    <div className="w-7 h-7 rounded-full bg-white border border-slate-200 flex items-center justify-center text-slate-600 group-hover:bg-[#83DF22] group-hover:border-[#83DF22] group-hover:text-slate-950 transition-colors shrink-0">
                       <Phone className="w-3.5 h-3.5" />
                     </div>
                   </a>
@@ -1025,7 +1025,7 @@ export default function RegistrationPlatform() {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   placeholder="Cari nama, kode reg, blok rumah..."
-                  className="w-full pl-10 pr-4 py-2.5 text-xs bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
+                  className="w-full pl-10 pr-4 py-2.5 text-base sm:text-xs bg-[#F8F9FA] border border-slate-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-[#A3E635]"
                 />
               </div>
 
@@ -1035,15 +1035,15 @@ export default function RegistrationPlatform() {
                 <div className="flex gap-2">
                   <button
                     onClick={exportToExcel}
-                    className="px-3 py-1.5 bg-[#EAFCD7] hover:bg-[#DCF9BF] border border-[#BCE88C] text-emerald-950 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-2.5 sm:px-3 py-1.5 bg-[#EAFCD7] hover:bg-[#DCF9BF] border border-[#BCE88C] text-emerald-950 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700" /> Excel (.csv)
+                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700 shrink-0" /> Excel (.csv)
                   </button>
                   <button
                     onClick={() => window.print()}
-                    className="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer"
+                    className="px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
                   >
-                    <Printer className="w-3.5 h-3.5" /> Cetak PDF
+                    <Printer className="w-3.5 h-3.5 shrink-0" /> Cetak PDF
                   </button>
                 </div>
               </div>
@@ -1069,7 +1069,7 @@ export default function RegistrationPlatform() {
                       </div>
                       <button
                         onClick={() => setDeleteModalId(p.id)}
-                        className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer"
+                        className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -1096,11 +1096,11 @@ export default function RegistrationPlatform() {
 
         {/* TAB 3: SCHEDULE */}
         {activeTab === 'schedule' && (
-          <div className="bg-white border border-slate-200/80 rounded-3xl p-5 sm:p-6 shadow-2xs space-y-4">
+          <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-2xs space-y-4">
             <h3 className="text-sm font-bold text-slate-900">Agenda Perlombaan Seion 2026</h3>
             
             <div className="space-y-3 text-xs">
-              <div className="p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
+              <div className="p-3.5 sm:p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-slate-900">Minggu, 9 Agustus 2026</span>
                   <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-full font-semibold text-[10px]">Hari 1</span>
@@ -1108,7 +1108,7 @@ export default function RegistrationPlatform() {
                 <p className="text-slate-600">🎯 Lomba Ketangkasan Anak (Kolam Mizu & B9–B10)</p>
               </div>
 
-              <div className="p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
+              <div className="p-3.5 sm:p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-slate-900">Sabtu, 15 Agustus 2026</span>
                   <span className="px-2 py-0.5 bg-amber-100 text-amber-900 rounded-full font-semibold text-[10px]">Hari 2</span>
@@ -1116,7 +1116,7 @@ export default function RegistrationPlatform() {
                 <p className="text-slate-600">🎨 Lomba Mewarnai Anak-Anak (Playgroup, TK, SD 1-3, SD 4-6)</p>
               </div>
 
-              <div className="p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
+              <div className="p-3.5 sm:p-4 bg-[#F8F9FA] border border-slate-200/80 rounded-2xl space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-slate-900">Minggu, 16 Agustus 2026</span>
                   <span className="px-2 py-0.5 bg-emerald-100 text-emerald-900 rounded-full font-semibold text-[10px]">Hari 3</span>
@@ -1124,7 +1124,7 @@ export default function RegistrationPlatform() {
                 <p className="text-slate-600">🚲 Parade Sepeda Hias, Jalan Santai, Pasutri, Bapak-Bapak & Ibu-Ibu</p>
               </div>
 
-              <div className="p-4 bg-[#F2FDE4] border border-[#9EEA38] rounded-2xl space-y-1.5">
+              <div className="p-3.5 sm:p-4 bg-[#F2FDE4] border border-[#9EEA38] rounded-2xl space-y-1.5">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-slate-950">Senin, 17 Agustus 2026</span>
                   <span className="px-2 py-0.5 bg-[#83DF22] text-slate-950 rounded-full font-extrabold text-[10px]">Malam Puncak</span>
@@ -1137,46 +1137,49 @@ export default function RegistrationPlatform() {
 
       </main>
 
-      {/* FLOATING BOTTOM NAV BAR */}
-      <nav className="print:hidden fixed bottom-4 left-1/2 -translate-x-1/2 bg-white/90 backdrop-blur-md border border-slate-200/80 shadow-2xl rounded-full px-3 py-2 z-40 flex items-center gap-1 sm:gap-2">
+      {/* FLOATING BOTTOM NAV BAR - OPTIMIZED FOR ALL MOBILE SCREENS */}
+      <nav className="print:hidden fixed bottom-3 left-1/2 -translate-x-1/2 bg-white/95 backdrop-blur-md border border-slate-200/90 shadow-2xl rounded-full px-2 py-1.5 z-40 flex items-center justify-between gap-1 w-[94%] max-w-sm sm:w-auto sm:px-3 sm:py-2 sm:gap-2">
         <button
           onClick={() => setActiveTab('register')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+          className={`flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'register'
               ? 'bg-slate-900 text-[#D2F54E] shadow-2xs'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Home className="w-3.5 h-3.5" /> Home
+          <Home className="w-3.5 h-3.5 shrink-0" />
+          <span>Home</span>
         </button>
 
         <button
           onClick={() => setActiveTab('participants')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+          className={`flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'participants'
               ? 'bg-slate-900 text-[#D2F54E] shadow-2xs'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Users className="w-3.5 h-3.5" /> Peserta ({participants.length})
+          <Users className="w-3.5 h-3.5 shrink-0" />
+          <span>Peserta ({participants.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('schedule')}
-          className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+          className={`flex-1 sm:flex-initial justify-center px-3 py-2 sm:px-4 sm:py-2 rounded-full text-xs font-bold transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0 cursor-pointer ${
             activeTab === 'schedule'
               ? 'bg-slate-900 text-[#D2F54E] shadow-2xs'
               : 'text-slate-600 hover:text-slate-900'
           }`}
         >
-          <Calendar className="w-3.5 h-3.5" /> Jadwal
+          <Calendar className="w-3.5 h-3.5 shrink-0" />
+          <span>Jadwal</span>
         </button>
       </nav>
 
       {/* MODAL BUKTI PENDAFTARAN DIGITAL */}
       {ticketModal && (
         <div className="print:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl p-6 space-y-4">
+          <div className="bg-white border border-slate-200 w-full max-w-[92vw] sm:max-w-sm rounded-3xl overflow-hidden shadow-2xl p-5 sm:p-6 space-y-4">
             <div className="text-center space-y-1">
               <div className="w-12 h-12 bg-[#E8FCD0] border border-[#BCE88C] text-emerald-800 rounded-full flex items-center justify-center mx-auto mb-1">
                 <Check className="w-6 h-6 stroke-[3]" />
@@ -1231,10 +1234,10 @@ export default function RegistrationPlatform() {
       {/* HELP MODAL */}
       {showHelpModal && (
         <div className="print:hidden fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-sm rounded-3xl p-6 space-y-4">
+          <div className="bg-white border border-slate-200 w-full max-w-[92vw] sm:max-w-sm rounded-3xl p-5 sm:p-6 space-y-4">
             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
               <h3 className="font-bold text-sm text-slate-900">Bantuan Pendaftaran</h3>
-              <button onClick={() => setShowHelpModal(false)} className="p-1 text-slate-400 hover:text-slate-600">
+              <button onClick={() => setShowHelpModal(false)} className="p-1 text-slate-400 hover:text-slate-600 cursor-pointer">
                 <X className="w-4 h-4" />
               </button>
             </div>
@@ -1275,7 +1278,7 @@ export default function RegistrationPlatform() {
       {/* MODAL KONFIRMASI HAPUS */}
       {deleteModalId && (
         <div className="print:hidden fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
-          <div className="bg-white border border-slate-200 w-full max-w-xs rounded-3xl p-5 space-y-4 text-center">
+          <div className="bg-white border border-slate-200 w-full max-w-[85vw] sm:max-w-xs rounded-3xl p-5 space-y-4 text-center">
             <AlertCircle className="w-8 h-8 text-rose-500 mx-auto" />
             <div>
               <h3 className="font-bold text-sm text-slate-900">Hapus Pendaftaran?</h3>
