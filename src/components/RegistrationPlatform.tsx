@@ -641,7 +641,7 @@ export default function RegistrationPlatform() {
                       >
                         {selectedGroupObj ? (
                           <div className="flex items-center gap-2.5">
-                            {renderGroupIcon(selectedGroupObj.id, "w-4 h-4 text-emerald-600 shrink-0")}
+                            {renderGroupIcon(selectedGroupObj.id, "w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0 stroke-[1.75]")}
                             <span className="font-normal text-slate-900">{selectedGroupObj.label}</span>
                           </div>
                         ) : (
@@ -670,9 +670,9 @@ export default function RegistrationPlatform() {
                                       : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
                                   }`}
                                 >
-                                  <div className="flex items-center gap-3">
-                                    {renderGroupIcon(group.id, `w-4.5 h-4.5 shrink-0 ${isSelected ? 'text-slate-950' : 'text-slate-600'}`)}
-                                    <span className="font-normal">{group.label}</span>
+                                  <div className="flex items-center gap-2.5">
+                                    {renderGroupIcon(group.id, `w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 stroke-[1.75] ${isSelected ? 'text-slate-950' : 'text-slate-500'}`)}
+                                    <span className="font-normal text-xs sm:text-sm">{group.label}</span>
                                   </div>
                                   {isSelected && (
                                     <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
