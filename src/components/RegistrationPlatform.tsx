@@ -150,7 +150,6 @@ export default function RegistrationPlatform() {
   const ITEMS_PER_BATCH = 10;
   const [visibleCount, setVisibleCount] = useState(ITEMS_PER_BATCH);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
-  const sentinelRef = useRef<HTMLDivElement>(null);
 
   const triggerPdfPrint = (format: 'general' | 'grouping') => {
     setPdfFormat(format);
@@ -847,30 +846,27 @@ export default function RegistrationPlatform() {
   const visibleParticipants = filteredParticipants.slice(0, visibleCount);
   const hasMore = visibleCount < filteredParticipants.length;
 
-  // Keep mutable refs so the stable observer callback always reads latest values
+  // Keep mutable refs so scroll handler always reads latest values without re-registering
   const isLoadingMoreRef = useRef(false);
   const hasMoreRef = useRef(hasMore);
   useEffect(() => { isLoadingMoreRef.current = isLoadingMore; }, [isLoadingMore]);
   useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
 
-  // Create the observer ONCE — never recreated; reads state via refs
+  // Reliable infinite scroll via window scroll — no DOM ref timing issues
   useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMoreRef.current && hasMoreRef.current) {
-          setIsLoadingMore(true);
-          setTimeout(() => {
-            setVisibleCount(c => c + ITEMS_PER_BATCH);
-            setIsLoadingMore(false);
-          }, 500);
-        }
-      },
-      { rootMargin: '120px', threshold: 0 }
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
+    const handleScroll = () => {
+      const nearBottom =
+        window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200;
+      if (nearBottom && !isLoadingMoreRef.current && hasMoreRef.current) {
+        setIsLoadingMore(true);
+        setTimeout(() => {
+          setVisibleCount(c => c + ITEMS_PER_BATCH);
+          setIsLoadingMore(false);
+        }, 500);
+      }
+    };
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedGroupObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
@@ -2103,8 +2099,6 @@ export default function RegistrationPlatform() {
                   </motion.div>
                 ))}
 
-                {/* SENTINEL — triggers IntersectionObserver */}
-                <div ref={sentinelRef} className="h-4" />
 
                 {/* LOADING INDICATOR */}
                 <AnimatePresence>
