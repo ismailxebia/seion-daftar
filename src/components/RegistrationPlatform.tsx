@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Calendar, Search,
   Trash2, Printer, FileSpreadsheet, Phone,
@@ -847,28 +847,31 @@ export default function RegistrationPlatform() {
   const visibleParticipants = filteredParticipants.slice(0, visibleCount);
   const hasMore = visibleCount < filteredParticipants.length;
 
-  // IntersectionObserver: load more when sentinel enters viewport
-  const loadMore = useCallback(() => {
-    if (isLoadingMore || !hasMore) return;
-    setIsLoadingMore(true);
-    setTimeout(() => {
-      setVisibleCount(c => c + ITEMS_PER_BATCH);
-      setIsLoadingMore(false);
-    }, 600);
-  }, [isLoadingMore, hasMore]);
+  // Keep mutable refs so the stable observer callback always reads latest values
+  const isLoadingMoreRef = useRef(false);
+  const hasMoreRef = useRef(hasMore);
+  useEffect(() => { isLoadingMoreRef.current = isLoadingMore; }, [isLoadingMore]);
+  useEffect(() => { hasMoreRef.current = hasMore; }, [hasMore]);
 
+  // Create the observer ONCE — never recreated; reads state via refs
   useEffect(() => {
     const el = sentinelRef.current;
     if (!el) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) loadMore();
+        if (entries[0].isIntersecting && !isLoadingMoreRef.current && hasMoreRef.current) {
+          setIsLoadingMore(true);
+          setTimeout(() => {
+            setVisibleCount(c => c + ITEMS_PER_BATCH);
+            setIsLoadingMore(false);
+          }, 500);
+        }
       },
-      { threshold: 0.1 }
+      { rootMargin: '120px', threshold: 0 }
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loadMore]);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const selectedGroupObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
   const activeSelectedCategoryObj = selectedGroupObj;
