@@ -1984,7 +1984,7 @@ export default function RegistrationPlatform() {
                       {bapak.length > 0 && (
                         <div className="text-xs">
                           <span className="text-[10px] font-extrabold uppercase text-blue-800 bg-blue-100 px-1.5 py-0.5 rounded mr-1">
-                            👨 Lomba Bapak ({bapakName})
+                            👨 Lomba Bapak-Bapak
                           </span>
                           <span className="text-slate-900 font-bold">{bapak.join(', ')}</span>
                         </div>
@@ -1992,7 +1992,7 @@ export default function RegistrationPlatform() {
                       {ibu.length > 0 && (
                         <div className="text-xs">
                           <span className="text-[10px] font-extrabold uppercase text-purple-800 bg-purple-100 px-1.5 py-0.5 rounded mr-1">
-                            👩 Lomba Ibu ({ibuName})
+                            👩 Lomba Ibu-Ibu
                           </span>
                           <span className="text-slate-900 font-bold">{ibu.join(', ')}</span>
                         </div>
