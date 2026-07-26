@@ -6,9 +6,10 @@ import {
   Trash2, Printer, FileSpreadsheet, Phone,
   Check, ChevronDown, Users, AlertCircle, RefreshCw,
   Clock, Home, X, CheckCircle2, Lock, KeyRound, ShieldCheck,
-  Baby, Sparkles, BookOpen, Trophy, GraduationCap, User
+  Baby, Sparkles, BookOpen, Trophy, GraduationCap, User,
+  FileText, Layers
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { signInAnonymously, onAuthStateChanged, User as FirebaseUser } from 'firebase/auth';
 import { collection, addDoc, onSnapshot, deleteDoc, doc, serverTimestamp } from 'firebase/firestore';
 import { auth, db, appId } from '@/lib/firebase';
@@ -18,6 +19,100 @@ import {
   CARE_TEAM,
   RegistrationParticipant
 } from '@/data/masterData';
+
+const cascadeContainerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.04,
+      delayChildren: 0.01
+    }
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0.08,
+      ease: 'easeOut'
+    }
+  }
+};
+
+const cascadeItemVariants: Variants = {
+  hidden: { 
+    opacity: 0, 
+    y: 10, 
+    filter: 'blur(6px)'
+  },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    filter: 'blur(0px)',
+    transition: {
+      type: 'tween',
+      ease: [0.16, 1, 0.3, 1],
+      duration: 0.28
+    }
+  },
+  exit: {
+    opacity: 0,
+    transition: {
+      duration: 0.06
+    }
+  }
+};
+
+const dropdownMenuVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    scale: 0.94,
+    y: -6,
+    transition: {
+      duration: 0.1,
+      ease: 'easeOut'
+    }
+  },
+  visible: {
+    opacity: 1,
+    scale: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 420,
+      damping: 26,
+      mass: 0.6,
+      staggerChildren: 0.035,
+      delayChildren: 0.01
+    }
+  },
+  exit: {
+    opacity: 0,
+    scale: 0.95,
+    y: -4,
+    transition: {
+      duration: 0.08,
+      ease: 'easeIn'
+    }
+  }
+};
+
+const dropdownItemVariants: Variants = {
+  hidden: {
+    opacity: 0,
+    y: 6,
+    filter: 'blur(3px)'
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    filter: 'blur(0px)',
+    transition: {
+      type: 'tween',
+      ease: [0.16, 1, 0.3, 1],
+      duration: 0.2
+    }
+  }
+};
 
 export default function RegistrationPlatform() {
   const [activeTab, setActiveTab] = useState<'register' | 'participants' | 'schedule'>('register');
@@ -46,6 +141,58 @@ export default function RegistrationPlatform() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isJenisPenampilanOpen, setIsJenisPenampilanOpen] = useState(false);
   const [isKategoriPerformerOpen, setIsKategoriPerformerOpen] = useState(false);
+
+  // PDF Format Dropdown State
+  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  const [pdfFormat, setPdfFormat] = useState<'general' | 'grouping'>('general');
+
+  const triggerPdfPrint = (format: 'general' | 'grouping') => {
+    setPdfFormat(format);
+    setPdfMenuOpen(false);
+    setTimeout(() => {
+      window.print();
+    }, 100);
+  };
+
+  // Helper to group participants for Grouping PDF export
+  const getGroupedPdfData = () => {
+    const childrenMap: { [lombaName: string]: RegistrationParticipant[] } = {};
+    const adultMap: { [lombaName: string]: RegistrationParticipant[] } = {};
+    const performerMap: { [jenisPenampilan: string]: RegistrationParticipant[] } = {};
+
+    filteredParticipants.forEach(p => {
+      if (p.type === 'Pengisi Acara') {
+        const jenis = p.lomba && p.lomba.length > 0 ? p.lomba[0] : 'Pengisi Acara';
+        if (!performerMap[jenis]) performerMap[jenis] = [];
+        performerMap[jenis].push(p);
+      } else if (p.type === 'Dewasa & Pasutri' || p.kategoriGroup?.includes('Dewasa') || p.kategoriGroup?.includes('Bapak') || p.kategoriGroup?.includes('Ibu') || p.kategoriGroup?.includes('Pasutri')) {
+        if (p.lomba && p.lomba.length > 0) {
+          p.lomba.forEach(lName => {
+            if (!adultMap[lName]) adultMap[lName] = [];
+            adultMap[lName].push(p);
+          });
+        } else {
+          const fallbackKey = p.kategoriGroup || 'Dewasa';
+          if (!adultMap[fallbackKey]) adultMap[fallbackKey] = [];
+          adultMap[fallbackKey].push(p);
+        }
+      } else {
+        // Anak / Remaja
+        if (p.lomba && p.lomba.length > 0) {
+          p.lomba.forEach(lName => {
+            if (!childrenMap[lName]) childrenMap[lName] = [];
+            childrenMap[lName].push(p);
+          });
+        } else {
+          const fallbackKey = p.kategoriGroup || 'Anak & Remaja';
+          if (!childrenMap[fallbackKey]) childrenMap[fallbackKey] = [];
+          childrenMap[fallbackKey].push(p);
+        }
+      }
+    });
+
+    return { childrenMap, adultMap, performerMap };
+  };
 
   // House Number Modal & Global State
   const [isHouseModalOpen, setIsHouseModalOpen] = useState(false);
@@ -735,6 +882,7 @@ export default function RegistrationPlatform() {
           </h1>
           <p className="text-xs text-slate-600 font-bold mt-1">
             HUT RI Ke-81 Cluster Mizu & B9–B10
+            {pdfFormat === 'grouping' ? ' (Format Grouping Lomba)' : ' (Format General)'}
           </p>
           <div className="flex justify-between items-center text-[10pt] text-slate-600 mt-3 pt-1 border-t border-slate-300">
             <span>Tanggal Cetak: <strong>{formattedToday}</strong></span>
@@ -742,52 +890,198 @@ export default function RegistrationPlatform() {
           </div>
         </div>
 
-        <table className="print-table">
-          <thead>
-            <tr>
-              <th style={{ width: '5%', textAlign: 'center' }}>No</th>
-              <th style={{ width: '14%' }}>Kode Reg</th>
-              <th style={{ width: '20%' }}>Nama Peserta</th>
-              <th style={{ width: '15%' }}>Nama Ortu</th>
-              <th style={{ width: '18%' }}>Kategori / Role</th>
-              <th style={{ width: '20%' }}>Lomba Diikuti</th>
-              <th style={{ width: '8%' }}>Blok</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredParticipants.map((p, idx) => {
-              const parentDisplay = (p.type === 'Anak / Remaja' || (p.namaOrangTua && p.namaOrangTua !== '-'))
-                ? p.namaOrangTua
-                : '-';
+        {pdfFormat === 'general' ? (
+          /* 1. FORMAT GENERAL (TABLE TUNGGAL) */
+          <table className="print-table">
+            <thead>
+              <tr>
+                <th style={{ width: '5%', textAlign: 'center' }}>No</th>
+                <th style={{ width: '14%' }}>Kode Reg</th>
+                <th style={{ width: '20%' }}>Nama Peserta</th>
+                <th style={{ width: '15%' }}>Nama Ortu</th>
+                <th style={{ width: '18%' }}>Kategori / Role</th>
+                <th style={{ width: '20%' }}>Lomba Diikuti</th>
+                <th style={{ width: '8%' }}>Blok</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filteredParticipants.map((p, idx) => {
+                const parentDisplay = (p.type === 'Anak / Remaja' || (p.namaOrangTua && p.namaOrangTua !== '-'))
+                  ? p.namaOrangTua
+                  : '-';
+
+                return (
+                  <tr key={p.id || idx}>
+                    <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
+                    <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
+                    <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
+                    <td style={{ fontWeight: parentDisplay !== '-' ? 'bold' : 'normal' }}>
+                      {parentDisplay}
+                    </td>
+                    <td>
+                      <div>{p.kategoriGroup}</div>
+                      {p.umur && <div style={{ fontSize: '8.5pt', color: '#475569' }}>({p.umur} Thn)</div>}
+                    </td>
+                    <td>
+                      <ul style={{ margin: 0, paddingLeft: '14px', listStyleType: 'disc' }}>
+                        {p.lomba?.map((l, i) => (
+                          <li key={i}>{l}</li>
+                        ))}
+                      </ul>
+                    </td>
+                    <td>
+                      <div>Blok {p.blokRumah}</div>
+                      {p.whatsapp && p.whatsapp !== '-' && <div style={{ fontSize: '8.5pt', color: '#475569' }}>{p.whatsapp}</div>}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        ) : (
+          /* 2. FORMAT GROUPING LOMBA */
+          <div className="space-y-6">
+            {(() => {
+              const { childrenMap, adultMap, performerMap } = getGroupedPdfData();
+              const hasChildren = Object.keys(childrenMap).length > 0;
+              const hasAdults = Object.keys(adultMap).length > 0;
+              const hasPerformers = Object.keys(performerMap).length > 0;
 
               return (
-                <tr key={p.id || idx}>
-                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{idx + 1}</td>
-                  <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
-                  <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
-                  <td style={{ fontWeight: parentDisplay !== '-' ? 'bold' : 'normal' }}>
-                    {parentDisplay}
-                  </td>
-                  <td>
-                    <div>{p.kategoriGroup}</div>
-                    {p.umur && <div style={{ fontSize: '8.5pt', color: '#475569' }}>({p.umur} Thn)</div>}
-                  </td>
-                  <td>
-                    <ul style={{ margin: 0, paddingLeft: '14px', listStyleType: 'disc' }}>
-                      {p.lomba?.map((l, i) => (
-                        <li key={i}>{l}</li>
+                <>
+                  {/* KATEGORI 1: LOMBA ANAK & REMAJA */}
+                  {hasChildren && (
+                    <div className="space-y-3">
+                      <div className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider">
+                        I. KATEGORI LOMBA ANAK & REMAJA
+                      </div>
+
+                      {Object.entries(childrenMap).map(([lombaTitle, plist]) => (
+                        <div key={lombaTitle} className="space-y-1" style={{ pageBreakInside: 'avoid' }}>
+                          <div className="font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center">
+                            <span>🎯 LOMBA: {lombaTitle}</span>
+                            <span className="text-[8.5pt] font-semibold text-slate-600">({plist.length} Peserta)</span>
+                          </div>
+                          <table className="print-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '6%', textAlign: 'center' }}>No</th>
+                                <th style={{ width: '15%' }}>Kode Reg</th>
+                                <th style={{ width: '25%' }}>Nama Anak</th>
+                                <th style={{ width: '22%' }}>Nama Orang Tua</th>
+                                <th style={{ width: '18%' }}>Tingkatan / Kategori</th>
+                                <th style={{ width: '14%' }}>Blok Rumah</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {plist.map((p, i) => (
+                                <tr key={p.id || i}>
+                                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{i + 1}</td>
+                                  <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
+                                  <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
+                                  <td>{p.namaOrangTua || '-'}</td>
+                                  <td>{p.kategoriGroup}</td>
+                                  <td>Blok {p.blokRumah}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
                       ))}
-                    </ul>
-                  </td>
-                  <td>
-                    <div>Blok {p.blokRumah}</div>
-                    {p.whatsapp && p.whatsapp !== '-' && <div style={{ fontSize: '8.5pt', color: '#475569' }}>{p.whatsapp}</div>}
-                  </td>
-                </tr>
+                    </div>
+                  )}
+
+                  {/* KATEGORI 2: LOMBA DEWASA & PASUTRI */}
+                  {hasAdults && (
+                    <div className="space-y-3 pt-2">
+                      <div className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider">
+                        II. KATEGORI LOMBA DEWASA & PASUTRI
+                      </div>
+
+                      {Object.entries(adultMap).map(([lombaTitle, plist]) => (
+                        <div key={lombaTitle} className="space-y-1" style={{ pageBreakInside: 'avoid' }}>
+                          <div className="font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center">
+                            <span>🏆 LOMBA / ACARA: {lombaTitle}</span>
+                            <span className="text-[8.5pt] font-semibold text-slate-600">({plist.length} Peserta)</span>
+                          </div>
+                          <table className="print-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '6%', textAlign: 'center' }}>No</th>
+                                <th style={{ width: '15%' }}>Kode Reg</th>
+                                <th style={{ width: '25%' }}>Nama Peserta</th>
+                                <th style={{ width: '22%' }}>Nama Pasangan</th>
+                                <th style={{ width: '18%' }}>Kategori</th>
+                                <th style={{ width: '14%' }}>Blok / Kontak</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {plist.map((p, i) => (
+                                <tr key={p.id || i}>
+                                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{i + 1}</td>
+                                  <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
+                                  <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
+                                  <td>{p.namaPasangan || '-'}</td>
+                                  <td>{p.kategoriGroup}</td>
+                                  <td>
+                                    <div>Blok {p.blokRumah}</div>
+                                    {p.whatsapp && p.whatsapp !== '-' && <div style={{ fontSize: '8pt', color: '#475569' }}>{p.whatsapp}</div>}
+                                  </td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* KATEGORI 3: PENGISI ACARA MALAM PUNCAK */}
+                  {hasPerformers && (
+                    <div className="space-y-3 pt-2">
+                      <div className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider">
+                        III. PENGISI ACARA MALAM PUNCAK (17 AGUSTUS)
+                      </div>
+
+                      {Object.entries(performerMap).map(([jenisPenampilan, plist]) => (
+                        <div key={jenisPenampilan} className="space-y-1" style={{ pageBreakInside: 'avoid' }}>
+                          <div className="font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center">
+                            <span>🎭 JENIS PENAMPILAN: {jenisPenampilan}</span>
+                            <span className="text-[8.5pt] font-semibold text-slate-600">({plist.length} Penampil)</span>
+                          </div>
+                          <table className="print-table">
+                            <thead>
+                              <tr>
+                                <th style={{ width: '6%', textAlign: 'center' }}>No</th>
+                                <th style={{ width: '15%' }}>Kode Reg</th>
+                                <th style={{ width: '30%' }}>Nama Penampil / Kelompok</th>
+                                <th style={{ width: '20%' }}>Tipe (Solo / Grup)</th>
+                                <th style={{ width: '15%' }}>Jumlah Anggota</th>
+                                <th style={{ width: '14%' }}>Blok Rumah</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {plist.map((p, i) => (
+                                <tr key={p.id || i}>
+                                  <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{i + 1}</td>
+                                  <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
+                                  <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
+                                  <td>{p.kategoriGroup || 'Performer'}</td>
+                                  <td style={{ textAlign: 'center' }}>{p.umur || '1'} Orang</td>
+                                  <td>Blok {p.blokRumah}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </>
               );
-            })}
-          </tbody>
-        </table>
+            })()}
+          </div>
+        )}
 
         {/* Tanda Tangan Panitia di Laporan PDF */}
         <div className="mt-12 flex justify-between text-xs text-slate-800" style={{ pageBreakInside: 'avoid' }}>
@@ -888,679 +1182,719 @@ export default function RegistrationPlatform() {
             </div>
 
             {/* MAIN FORM CARD (Node 237:741) */}
-            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] overflow-hidden">
+            <div className="bg-white border border-slate-200/80 rounded-3xl p-4 sm:p-6 shadow-[0_8px_30px_rgb(0,0,0,0.03)] relative z-10">
               <AnimatePresence mode="wait">
-                <motion.div
-                  key={formType}
-                  initial={{ opacity: 0, y: 10, filter: 'blur(2px)' }}
-                  animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
-                  exit={{ opacity: 0, y: -10, filter: 'blur(2px)' }}
-                  transition={{
-                    type: 'tween',
-                    ease: [0.16, 1, 0.3, 1], // Smooth cubic-bezier interpolation
-                    duration: 0.28
-                  }}
-                  className="space-y-5"
-                >
+                {/* 1. FORM ANAK & REMAJA */}
+                {formType === 'children' && (
+                  <motion.form
+                    key="children-form"
+                    variants={cascadeContainerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    onSubmit={handleSaveRegistration}
+                    className="space-y-4 sm:space-y-5"
+                  >
+                    <motion.div variants={cascadeItemVariants} className="pb-3 border-b border-slate-100">
+                      <h3 className="text-base font-bold text-slate-900">Data Peserta Anak</h3>
+                    </motion.div>
 
-              {/* 1. FORM ANAK & REMAJA */}
-              {formType === 'children' && (
-                <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
-                  <div className="pb-3 border-b border-slate-100">
-                    <h3 className="text-base font-bold text-slate-900">Data Peserta Anak</h3>
-                  </div>
+                    {/* FIELD 1: Nama Lengkap Anak */}
+                    <motion.div variants={cascadeItemVariants}>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                        Nama Lengkap Anak <span className="text-rose-500">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={childData.namaAnak}
+                        onChange={(e) => setChildData({ ...childData, namaAnak: e.target.value })}
+                        placeholder="Nama Lengkap Anak"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                      />
+                    </motion.div>
 
-                  {/* FIELD 1: Nama Lengkap Anak */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      Nama Lengkap Anak <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={childData.namaAnak}
-                      onChange={(e) => setChildData({ ...childData, namaAnak: e.target.value })}
-                      placeholder="Nama Lengkap Anak"
-                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
-                  </div>
+                    {/* FIELD 2: DROPDOWN CUSTOM TINGKATAN SEKOLAH */}
+                    <motion.div variants={cascadeItemVariants} className={`relative ${isDropdownOpen ? 'z-50' : 'z-20'}`}>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                        Tingkatan Sekolah <span className="text-rose-500">*</span>
+                      </label>
 
-                  {/* FIELD 2: DROPDOWN CUSTOM TINGKATAN SEKOLAH DENGAN ANIMASI CASCADE & ICON LINE */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      Tingkatan Sekolah <span className="text-rose-500">*</span>
-                    </label>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                          className={`w-full h-[42px] px-[17px] bg-white border ${isDropdownOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                            } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                        >
+                          {selectedGroupObj ? (
+                            <div className="flex items-center gap-2.5">
+                              {renderGroupIcon(selectedGroupObj.id, "w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0 stroke-[1.75]")}
+                              <span className="font-normal text-slate-900">{selectedGroupObj.label}</span>
+                            </div>
+                          ) : (
+                            <span className="font-normal text-[#94a3b8]">-- Pilih Tingkatan Sekolah --</span>
+                          )}
+                          <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                        </button>
 
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                        className={`w-full h-[42px] px-[17px] bg-white border ${isDropdownOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
-                          } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
-                      >
-                        {selectedGroupObj ? (
-                          <div className="flex items-center gap-2.5">
-                            {renderGroupIcon(selectedGroupObj.id, "w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-600 shrink-0 stroke-[1.75]")}
-                            <span className="font-normal text-slate-900">{selectedGroupObj.label}</span>
-                          </div>
-                        ) : (
-                          <span className="font-normal text-[#94a3b8]">-- Pilih Tingkatan Sekolah --</span>
-                        )}
-                        <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isDropdownOpen ? 'rotate-180 text-slate-700' : ''}`} />
-                      </button>
+                        {/* DROPDOWN POPUP MENU */}
+                        <AnimatePresence>
+                          {isDropdownOpen && (
+                            <>
+                              <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)} />
 
-                      {/* DROPDOWN POPUP MENU WITH CASCADE ANIMATION */}
-                      {isDropdownOpen && (
-                        <>
-                          <div className="fixed inset-0 z-30" onClick={() => setIsDropdownOpen(false)} />
-
-                          <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-                            {AGE_GROUPS.map((group, index) => {
-                              const isSelected = childData.tingkatanId === group.id;
-                              return (
-                                <button
-                                  key={group.id}
-                                  type="button"
-                                  style={{ animationDelay: `${index * 35}ms` }}
-                                  onClick={() => handleSelectTingkatan(group.id)}
-                                  className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${isSelected
-                                      ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
-                                      : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
-                                    }`}
-                                >
-                                  <div className="flex items-center gap-2.5">
-                                    {renderGroupIcon(group.id, `w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 stroke-[1.75] ${isSelected ? 'text-slate-950' : 'text-slate-500'}`)}
-                                    <span className="font-normal text-xs sm:text-sm">{group.label}</span>
-                                  </div>
-                                  {isSelected && (
-                                    <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* FIELD 3: CABANG LOMBA */}
-                  <div className="pt-2 space-y-3">
-                    <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
-                      Cabang Lomba Diikuti <span className="text-rose-500">*</span>
-                    </label>
-
-                    {!childData.tingkatanId ? (
-                      <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500">
-                        <AlertCircle className="w-4 h-4 mx-auto mb-1 text-slate-400" />
-                        Silakan pilih <b>Tingkatan Sekolah</b> di atas untuk membuka daftar pilihan lomba.
+                              <motion.div
+                                variants={dropdownMenuVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                style={{ originY: 0 }}
+                                className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.22),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 overflow-hidden"
+                              >
+                                {AGE_GROUPS.map((group) => {
+                                  const isSelected = childData.tingkatanId === group.id;
+                                  return (
+                                    <motion.button
+                                      key={group.id}
+                                      variants={dropdownItemVariants}
+                                      type="button"
+                                      onClick={() => handleSelectTingkatan(group.id)}
+                                      className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-colors cursor-pointer active:scale-[0.99] ${isSelected
+                                          ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                          : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                        }`}
+                                    >
+                                      <div className="flex items-center gap-2.5">
+                                        {renderGroupIcon(group.id, `w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0 stroke-[1.75] ${isSelected ? 'text-slate-950' : 'text-slate-500'}`)}
+                                        <span className="font-normal text-xs sm:text-sm">{group.label}</span>
+                                      </div>
+                                      {isSelected && (
+                                        <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                      )}
+                                    </motion.button>
+                                  );
+                                })}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
                       </div>
-                    ) : (
-                      <div className="space-y-2">
-                        {/* List Ketangkasan */}
-                        {activeSelectedCategoryObj?.dexterityList.map((item, idx) => {
-                          const isChecked = childData.selectedLomba.includes(item);
-                          return (
+                    </motion.div>
+
+                    {/* FIELD 3: CABANG LOMBA */}
+                    <motion.div variants={cascadeItemVariants} className="pt-2 space-y-3">
+                      <label className="block text-xs font-bold text-slate-900 uppercase tracking-wider">
+                        Cabang Lomba Diikuti <span className="text-rose-500">*</span>
+                      </label>
+
+                      {!childData.tingkatanId ? (
+                        <div className="p-4 bg-slate-50 border border-dashed border-slate-200 rounded-2xl text-center text-xs text-slate-500">
+                          <AlertCircle className="w-4 h-4 mx-auto mb-1 text-slate-400" />
+                          Silakan pilih <b>Tingkatan Sekolah</b> di atas untuk membuka daftar pilihan lomba.
+                        </div>
+                      ) : (
+                        <div className="space-y-2">
+                          {/* List Ketangkasan */}
+                          {activeSelectedCategoryObj?.dexterityList.map((item, idx) => {
+                            const isChecked = childData.selectedLomba.includes(item);
+                            return (
+                              <button
+                                key={idx}
+                                type="button"
+                                onClick={() => toggleChildLomba(item)}
+                                className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${isChecked
+                                    ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
+                                    : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
+                                  }`}
+                              >
+                                <div className="flex items-center gap-2.5 sm:gap-3">
+                                  <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                    }`}>
+                                    {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                  </div>
+                                  <span className="font-normal">{item}</span>
+                                </div>
+                              </button>
+                            );
+                          })}
+
+                          {/* Mewarnai */}
+                          {activeSelectedCategoryObj?.coloringCat && (
                             <button
-                              key={idx}
                               type="button"
-                              onClick={() => toggleChildLomba(item)}
-                              className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${isChecked
+                              onClick={() => toggleChildLomba(activeSelectedCategoryObj.coloringCat!)}
+                              className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat)
                                   ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                                   : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                                 }`}
                             >
                               <div className="flex items-center gap-2.5 sm:gap-3">
-                                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
                                   }`}>
-                                  {isChecked && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                  {childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                                 </div>
-                                <span className="font-normal">{item}</span>
+                                <span className="font-normal">{activeSelectedCategoryObj.coloringCat}</span>
                               </div>
                             </button>
-                          );
-                        })}
+                          )}
 
-                        {/* Mewarnai */}
-                        {activeSelectedCategoryObj?.coloringCat && (
+                          {/* Fashion Show */}
+                          {activeSelectedCategoryObj?.fashionCat && (
+                            <button
+                              type="button"
+                              onClick={() => toggleChildLomba(activeSelectedCategoryObj.fashionCat!)}
+                              className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat)
+                                  ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
+                                  : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
+                                }`}
+                            >
+                              <div className="flex items-center gap-2.5 sm:gap-3">
+                                <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                  }`}>
+                                  {childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                </div>
+                                <span className="font-normal">{activeSelectedCategoryObj.fashionCat}</span>
+                              </div>
+                            </button>
+                          )}
+
+                          {/* Parade Sepeda */}
                           <button
                             type="button"
-                            onClick={() => toggleChildLomba(activeSelectedCategoryObj.coloringCat!)}
-                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat)
+                            onClick={() => toggleChildLomba('Parade Sepeda Hias (Minggu, 16 Ags)')}
+                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)')
                                 ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
                                 : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
                               }`}
                           >
                             <div className="flex items-center gap-2.5 sm:gap-3">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
                                 }`}>
-                                {childData.selectedLomba.includes(activeSelectedCategoryObj.coloringCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                {childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                               </div>
-                              <span className="font-normal">{activeSelectedCategoryObj.coloringCat}</span>
+                              <span className="font-normal">Parade Sepeda Hias (Minggu, 16 Ags)</span>
                             </div>
                           </button>
-                        )}
+                        </div>
+                      )}
+                    </motion.div>
 
-                        {/* Fashion Show */}
-                        {activeSelectedCategoryObj?.fashionCat && (
-                          <button
-                            type="button"
-                            onClick={() => toggleChildLomba(activeSelectedCategoryObj.fashionCat!)}
-                            className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat)
-                                ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
-                                : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
-                              }`}
-                          >
-                            <div className="flex items-center gap-2.5 sm:gap-3">
-                              <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
-                                }`}>
-                                {childData.selectedLomba.includes(activeSelectedCategoryObj.fashionCat) && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                              </div>
-                              <span className="font-normal">{activeSelectedCategoryObj.fashionCat}</span>
-                            </div>
-                          </button>
-                        )}
-
-                        {/* Parade Sepeda */}
-                        <button
-                          type="button"
-                          onClick={() => toggleChildLomba('Parade Sepeda Hias (Minggu, 16 Ags)')}
-                          className={`w-full p-3 sm:p-3.5 rounded-2xl border text-xs sm:text-sm font-normal flex items-center justify-between transition-all cursor-pointer text-left ${childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)')
-                              ? 'bg-[#F2FDE4] border-[#9EEA38] text-slate-900 shadow-2xs font-medium'
-                              : 'bg-[#F8F9FA] border-slate-200 text-slate-700 hover:bg-slate-100/80'
-                            }`}
-                        >
-                          <div className="flex items-center gap-2.5 sm:gap-3">
-                            <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 transition-all ${childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
-                              }`}>
-                              {childData.selectedLomba.includes('Parade Sepeda Hias (Minggu, 16 Ags)') && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                            </div>
-                            <span className="font-normal">Parade Sepeda Hias (Minggu, 16 Ags)</span>
-                          </div>
-                        </button>
+                    {/* FIELD 4: Kontak Orang Tua & Rumah */}
+                    <motion.div variants={cascadeItemVariants} className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
+                      <div>
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                          Nama Orang Tua <span className="text-slate-400 font-normal">(Opsional)</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={childData.namaOrangTua}
+                          onChange={(e) => setChildData({ ...childData, namaOrangTua: e.target.value })}
+                          placeholder="Nama Orang Tua"
+                          className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                        />
                       </div>
-                    )}
-                  </div>
+                      <div>
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                          No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
+                        </label>
+                        <input
+                          type="tel"
+                          value={childData.whatsapp}
+                          onChange={(e) => setChildData({ ...childData, whatsapp: e.target.value })}
+                          placeholder="0812xxxxxxx"
+                          className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                        />
+                      </div>
+                    </motion.div>
 
-                  {/* FIELD 4: Kontak Orang Tua & Rumah */}
-                  <div className="pt-3 border-t border-slate-100 grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                    <div>
+                    {/* Submit Button */}
+                    <motion.div variants={cascadeItemVariants}>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full h-[44px] bg-[#C5F542] hover:bg-[#B3EE23] active:bg-[#A6E215] text-slate-950 font-bold text-sm rounded-full shadow-[0px_-1px_3px_0px_rgba(0,0,0,0.10)] transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                      >
+                        {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />}
+                        Kirim Pendaftaran Anak
+                      </button>
+                    </motion.div>
+                  </motion.form>
+                )}
+
+                {/* 2. FORM DEWASA & PASUTRI */}
+                {formType === 'adults' && (
+                  <motion.form
+                    key="adults-form"
+                    variants={cascadeContainerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    onSubmit={handleSaveRegistration}
+                    className="space-y-4 sm:space-y-5"
+                  >
+                    <motion.div variants={cascadeItemVariants} className="pb-2 border-b border-slate-100">
+                      <h3 className="text-base font-bold text-slate-900">Data Peserta Dewasa / Pasutri</h3>
+                    </motion.div>
+
+                    {/* FIELD 1: NAMA LENGKAP */}
+                    <motion.div variants={cascadeItemVariants}>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        Nama Orang Tua <span className="text-slate-400 font-normal">(Opsional)</span>
+                        Nama Lengkap <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
-                        value={childData.namaOrangTua}
-                        onChange={(e) => setChildData({ ...childData, namaOrangTua: e.target.value })}
-                        placeholder="Nama Orang Tua"
+                        required
+                        value={adultData.namaPeserta}
+                        onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
+                        placeholder="Nama Lengkap"
                         className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
-                    </div>
-                    <div>
+                    </motion.div>
+
+                    {/* FIELD 3: KAMU SEBAGAI APA */}
+                    <motion.div variants={cascadeItemVariants}>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                        Kamu sebagai apa <span className="text-rose-500">*</span>
+                      </label>
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdultData(prev => {
+                              const newRole = 'Bapak Bapak';
+                              let newLomba = prev.selectedLomba;
+                              if (!prev.hasSpouse) {
+                                newLomba = newLomba.filter(l => !['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(l));
+                              }
+                              return { ...prev, role: newRole, selectedLomba: newLomba };
+                            });
+                          }}
+                          className={`h-[44px] px-4 rounded-[12px] border text-xs sm:text-sm font-normal flex items-center gap-3 transition-all cursor-pointer ${
+                            adultData.role === 'Bapak Bapak'
+                              ? 'bg-white border-slate-900 text-slate-900 shadow-xs font-semibold'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            adultData.role === 'Bapak Bapak' ? 'border-slate-900 bg-white' : 'border-slate-300'
+                          }`}>
+                            {adultData.role === 'Bapak Bapak' && <div className="w-2 h-2 rounded-full bg-slate-900" />}
+                          </div>
+                          <span>Bapak Bapak</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAdultData(prev => {
+                              const newRole = 'Ibu-Ibu';
+                              let newLomba = prev.selectedLomba;
+                              if (!prev.hasSpouse) {
+                                newLomba = newLomba.filter(l => !['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].includes(l));
+                              }
+                              return { ...prev, role: newRole, selectedLomba: newLomba };
+                            });
+                          }}
+                          className={`h-[44px] px-4 rounded-[12px] border text-xs sm:text-sm font-normal flex items-center gap-3 transition-all cursor-pointer ${
+                            adultData.role === 'Ibu-Ibu'
+                              ? 'bg-white border-slate-900 text-slate-900 shadow-xs font-semibold'
+                              : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
+                            adultData.role === 'Ibu-Ibu' ? 'border-slate-900 bg-white' : 'border-slate-300'
+                          }`}>
+                            {adultData.role === 'Ibu-Ibu' && <div className="w-2 h-2 rounded-full bg-slate-900" />}
+                          </div>
+                          <span>Ibu-Ibu</span>
+                        </button>
+                      </div>
+                    </motion.div>
+
+                    {/* FIELD 4: NAMA PASANGAN */}
+                    {adultData.hasSpouse && (
+                      <motion.div variants={cascadeItemVariants} className="animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                          {adultData.role === 'Ibu-Ibu' ? 'Nama Lengkap Suami' : 'Nama Lengkap Istri'} <span className="text-rose-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          required={adultData.hasSpouse}
+                          value={adultData.namaPasangan}
+                          onChange={(e) => setAdultData({ ...adultData, namaPasangan: e.target.value })}
+                          placeholder={adultData.role === 'Ibu-Ibu' ? 'Nama Suami' : 'Nama Istri'}
+                          className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                        />
+                      </motion.div>
+                    )}
+
+                    {/* FIELD 5: CHECKBOX TOGGLE PASUTRI */}
+                    <motion.div variants={cascadeItemVariants}>
+                      <button
+                        type="button"
+                        onClick={() => setAdultData(prev => {
+                          const newHasSpouse = !prev.hasSpouse;
+                          let newLomba = prev.selectedLomba;
+                          if (!newHasSpouse) {
+                            newLomba = newLomba.filter(l => !['Make Up Pasangan', 'Joget Balon Pasutri'].includes(l));
+                            if (prev.role === 'Bapak Bapak') {
+                              newLomba = newLomba.filter(l => !['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(l));
+                            } else {
+                              newLomba = newLomba.filter(l => !['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].includes(l));
+                            }
+                          }
+                          return { ...prev, hasSpouse: newHasSpouse, selectedLomba: newLomba };
+                        })}
+                        className="w-full py-3 px-4 bg-[#F4F4F5] hover:bg-[#E4E4E7] rounded-[12px] border border-slate-200/80 text-xs sm:text-sm font-normal text-slate-700 flex items-center gap-3 transition-all cursor-pointer text-left"
+                      >
+                        <div className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 transition-colors ${
+                          adultData.hasSpouse ? 'bg-slate-900 text-white' : 'border border-slate-400 bg-white'
+                        }`}>
+                          {adultData.hasSpouse && <Check className="w-3 h-3 stroke-[3]" />}
+                        </div>
+                        <span className="font-normal text-slate-800">
+                          {adultData.hasSpouse
+                            ? 'Uncheck jika mendaftarkan tanpa pasangan'
+                            : 'Checklist untuk menambahkan nama pasangan suami / istri'}
+                        </span>
+                      </button>
+                    </motion.div>
+
+                    {/* LOMBA SECTIONS */}
+                    <motion.div variants={cascadeItemVariants} className="space-y-4 pt-1">
+                      
+                      {/* SECTION 1: LOMBA PASUTRI */}
+                      <div>
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                          Lomba Pasutri (Minggu, 16 Ags) <span className="text-rose-500">*</span>
+                        </label>
+                        <div className="space-y-2">
+                          {['Make Up Pasangan', 'Joget Balon Pasutri'].map((item, itemIdx) => {
+                            const isChecked = adultData.selectedLomba.includes(item);
+                            const isDisabled = !adultData.hasSpouse;
+                            return (
+                              <button
+                                key={itemIdx}
+                                type="button"
+                                disabled={isDisabled}
+                                onClick={() => toggleAdultLomba(item)}
+                                className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
+                                  isDisabled
+                                    ? 'bg-[#EEEEEE] text-slate-400 border border-transparent pointer-events-none'
+                                    : isChecked
+                                      ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
+                                      : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
+                                }`}
+                              >
+                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                  isChecked
+                                    ? 'bg-[#83DF22] text-slate-950'
+                                    : isDisabled
+                                      ? 'border border-slate-300 bg-white'
+                                      : 'border border-slate-300 bg-white'
+                                }`}>
+                                  {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                </div>
+                                <span>{item}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {/* SECTION 2: LOMBA BAPAK-BAPAK */}
+                      {(adultData.hasSpouse || adultData.role === 'Bapak Bapak') && (
+                        <div className="animate-in fade-in-0 duration-200">
+                          <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                            Lomba Bapak-Bapak (Minggu, 16 Ags) <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="space-y-2">
+                            {['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].map((item, itemIdx) => {
+                              const isChecked = adultData.selectedLomba.includes(item);
+                              const displayLabel = item.replace(' (Bapak-Bapak)', '');
+                              return (
+                                <button
+                                  key={itemIdx}
+                                  type="button"
+                                  onClick={() => toggleAdultLomba(item)}
+                                  className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
+                                    isChecked
+                                      ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
+                                      : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
+                                  }`}
+                                >
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                    isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                  }`}>
+                                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                  </div>
+                                  <span>{displayLabel}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                      {/* SECTION 3: LOMBA IBU-IBU */}
+                      {(adultData.hasSpouse || adultData.role === 'Ibu-Ibu') && (
+                        <div className="animate-in fade-in-0 duration-200">
+                          <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                            Lomba Ibu-Ibu (Minggu, 16 Ags) <span className="text-rose-500">*</span>
+                          </label>
+                          <div className="space-y-2">
+                            {['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].map((item, itemIdx) => {
+                              const isChecked = adultData.selectedLomba.includes(item);
+                              const displayLabel = item;
+                              return (
+                                <button
+                                  key={itemIdx}
+                                  type="button"
+                                  onClick={() => toggleAdultLomba(item)}
+                                  className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
+                                    isChecked
+                                      ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
+                                      : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
+                                  }`}
+                                >
+                                  <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
+                                    isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
+                                  }`}>
+                                    {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
+                                  </div>
+                                  <span>{displayLabel}</span>
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
+
+                    </motion.div>
+
+                    {/* FIELD WHATSAPP */}
+                    <motion.div variants={cascadeItemVariants}>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">
                         No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
                       </label>
                       <input
                         type="tel"
-                        value={childData.whatsapp}
-                        onChange={(e) => setChildData({ ...childData, whatsapp: e.target.value })}
+                        value={adultData.whatsapp}
+                        onChange={(e) => setAdultData({ ...adultData, whatsapp: e.target.value })}
                         placeholder="0812xxxxxxx"
                         className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
-                    </div>
-                  </div>
+                    </motion.div>
 
-                  {/* Submit Button */}
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                    <motion.div variants={cascadeItemVariants}>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full h-[44px] bg-[#C5F542] hover:bg-[#B3EE23] active:bg-[#A6E215] text-slate-950 font-bold text-sm rounded-full shadow-[0px_-1px_3px_0px_rgba(0,0,0,0.10)] transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                      >
+                        {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />}
+                        Kirim Pendaftaran Dewasa
+                      </button>
+                    </motion.div>
+                  </motion.form>
+                )}
+
+                {/* 3. FORM PENGISI ACARA */}
+                {formType === 'performers' && (
+                  <motion.form
+                    key="performers-form"
+                    variants={cascadeContainerVariants}
+                    initial="hidden"
+                    animate="visible"
+                    exit="exit"
+                    onSubmit={handleSaveRegistration}
+                    className="space-y-4 sm:space-y-5"
                   >
-                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Kirim Pendaftaran Anak
-                  </button>
-                </form>
-              )}
+                    <motion.div variants={cascadeItemVariants} className="pb-3 border-b border-slate-100">
+                      <h3 className="text-base font-bold text-slate-900">Pengisi Acara Malam Puncak (17 Ags)</h3>
+                    </motion.div>
 
-              {/* 2. FORM DEWASA & PASUTRI */}
-              {formType === 'adults' && (
-                <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
-                  <div className="pb-2 border-b border-slate-100">
-                    <h3 className="text-base font-bold text-slate-900">Data Peserta Dewasa / Pasutri</h3>
-                  </div>
-
-                  {/* FIELD 1: NAMA LENGKAP */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      Nama Lengkap <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={adultData.namaPeserta}
-                      onChange={(e) => setAdultData({ ...adultData, namaPeserta: e.target.value })}
-                      placeholder="Nama Lengkap"
-                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
-                  </div>
-
-                  {/* FIELD 3: KAMU SEBAGAI APA */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      Kamu sebagai apa <span className="text-rose-500">*</span>
-                    </label>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAdultData(prev => {
-                            const newRole = 'Bapak Bapak';
-                            let newLomba = prev.selectedLomba;
-                            // If not pasutri, remove opposite role lomba
-                            if (!prev.hasSpouse) {
-                              newLomba = newLomba.filter(l => !['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(l));
-                            }
-                            return { ...prev, role: newRole, selectedLomba: newLomba };
-                          });
-                        }}
-                        className={`h-[44px] px-4 rounded-[12px] border text-xs sm:text-sm font-normal flex items-center gap-3 transition-all cursor-pointer ${
-                          adultData.role === 'Bapak Bapak'
-                            ? 'bg-white border-slate-900 text-slate-900 shadow-xs font-semibold'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          adultData.role === 'Bapak Bapak' ? 'border-slate-900 bg-white' : 'border-slate-300'
-                        }`}>
-                          {adultData.role === 'Bapak Bapak' && <div className="w-2 h-2 rounded-full bg-slate-900" />}
-                        </div>
-                        <span>Bapak Bapak</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAdultData(prev => {
-                            const newRole = 'Ibu-Ibu';
-                            let newLomba = prev.selectedLomba;
-                            // If not pasutri, remove opposite role lomba
-                            if (!prev.hasSpouse) {
-                              newLomba = newLomba.filter(l => !['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].includes(l));
-                            }
-                            return { ...prev, role: newRole, selectedLomba: newLomba };
-                          });
-                        }}
-                        className={`h-[44px] px-4 rounded-[12px] border text-xs sm:text-sm font-normal flex items-center gap-3 transition-all cursor-pointer ${
-                          adultData.role === 'Ibu-Ibu'
-                            ? 'bg-white border-slate-900 text-slate-900 shadow-xs font-semibold'
-                            : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300'
-                        }`}
-                      >
-                        <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 ${
-                          adultData.role === 'Ibu-Ibu' ? 'border-slate-900 bg-white' : 'border-slate-300'
-                        }`}>
-                          {adultData.role === 'Ibu-Ibu' && <div className="w-2 h-2 rounded-full bg-slate-900" />}
-                        </div>
-                        <span>Ibu-Ibu</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* FIELD 4: [DINAMIS] NAMA PASANGAN (SUAMI / ISTRI) - HANYA MUNCUL JIKA HAS SPOUSE CHECKED */}
-                  {adultData.hasSpouse && (
-                    <div className="animate-in fade-in-0 slide-in-from-top-2 duration-200">
+                    <motion.div variants={cascadeItemVariants}>
                       <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        {adultData.role === 'Ibu-Ibu' ? 'Nama Lengkap Suami' : 'Nama Lengkap Istri'} <span className="text-rose-500">*</span>
+                        Nama Penampil / Kelompok <span className="text-rose-500">*</span>
                       </label>
                       <input
                         type="text"
-                        required={adultData.hasSpouse}
-                        value={adultData.namaPasangan}
-                        onChange={(e) => setAdultData({ ...adultData, namaPasangan: e.target.value })}
-                        placeholder={adultData.role === 'Ibu-Ibu' ? 'Nama Suami' : 'Nama Istri'}
+                        required
+                        value={performerData.namaPenampil}
+                        onChange={(e) => setPerformerData({ ...performerData, namaPenampil: e.target.value })}
+                        placeholder="Nama Penampil / Kelompok"
                         className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
-                    </div>
-                  )}
+                    </motion.div>
 
-                  {/* FIELD 5: CHECKBOX TOGGLE PASUTRI */}
-                  <div>
-                    <button
-                      type="button"
-                      onClick={() => setAdultData(prev => {
-                        const newHasSpouse = !prev.hasSpouse;
-                        // If unchecking pasutri, remove any selected Pasutri lomba
-                        let newLomba = prev.selectedLomba;
-                        if (!newHasSpouse) {
-                          newLomba = newLomba.filter(l => !['Make Up Pasangan', 'Joget Balon Pasutri'].includes(l));
-                          if (prev.role === 'Bapak Bapak') {
-                            newLomba = newLomba.filter(l => !['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].includes(l));
-                          } else {
-                            newLomba = newLomba.filter(l => !['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].includes(l));
-                          }
-                        }
-                        return { ...prev, hasSpouse: newHasSpouse, selectedLomba: newLomba };
-                      })}
-                      className="w-full py-3 px-4 bg-[#F4F4F5] hover:bg-[#E4E4E7] rounded-[12px] border border-slate-200/80 text-xs sm:text-sm font-normal text-slate-700 flex items-center gap-3 transition-all cursor-pointer text-left"
-                    >
-                      <div className={`w-4 h-4 rounded-[4px] flex items-center justify-center shrink-0 transition-colors ${
-                        adultData.hasSpouse ? 'bg-slate-900 text-white' : 'border border-slate-400 bg-white'
-                      }`}>
-                        {adultData.hasSpouse && <Check className="w-3 h-3 stroke-[3]" />}
-                      </div>
-                      <span className="font-normal text-slate-800">
-                        {adultData.hasSpouse
-                          ? 'Uncheck jika mendaftarkan tanpa pasangan'
-                          : 'Checklist untuk menambahkan nama pasangan suami / istri'}
-                      </span>
-                    </button>
-                  </div>
-
-                  {/* LOMBA SECTIONS */}
-                  <div className="space-y-4 pt-1">
-                    
-                    {/* SECTION 1: LOMBA PASUTRI (DISABLED JIKA UNCHECKED) */}
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                        Lomba Pasutri (Minggu, 16 Ags) <span className="text-rose-500">*</span>
-                      </label>
-                      <div className="space-y-2">
-                        {['Make Up Pasangan', 'Joget Balon Pasutri'].map((item, itemIdx) => {
-                          const isChecked = adultData.selectedLomba.includes(item);
-                          const isDisabled = !adultData.hasSpouse;
-                          return (
-                            <button
-                              key={itemIdx}
-                              type="button"
-                              disabled={isDisabled}
-                              onClick={() => toggleAdultLomba(item)}
-                              className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
-                                isDisabled
-                                  ? 'bg-[#EEEEEE] text-slate-400 border border-transparent pointer-events-none'
-                                  : isChecked
-                                    ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
-                                    : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
-                              }`}
-                            >
-                              <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                                isChecked
-                                  ? 'bg-[#83DF22] text-slate-950'
-                                  : isDisabled
-                                    ? 'border border-slate-300 bg-white'
-                                    : 'border border-slate-300 bg-white'
-                              }`}>
-                                {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                              </div>
-                              <span>{item}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {/* SECTION 2: LOMBA BAPAK-BAPAK (DITAMPILKAN JIKA PASUTRI CHECKED ATAU ROLE === 'Bapak Bapak') */}
-                    {(adultData.hasSpouse || adultData.role === 'Bapak Bapak') && (
-                      <div className="animate-in fade-in-0 duration-200">
-                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                          Lomba Bapak-Bapak (Minggu, 16 Ags) <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="space-y-2">
-                          {['Tendangan Penalti (Bapak-Bapak)', 'Lempar Bola Pakai Sarung (Bapak-Bapak)'].map((item, itemIdx) => {
-                            const isChecked = adultData.selectedLomba.includes(item);
-                            const displayLabel = item.replace(' (Bapak-Bapak)', '');
-                            return (
-                              <button
-                                key={itemIdx}
-                                type="button"
-                                onClick={() => toggleAdultLomba(item)}
-                                className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
-                                  isChecked
-                                    ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
-                                    : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
-                                }`}
-                              >
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                                  isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
-                                }`}>
-                                  {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                                </div>
-                                <span>{displayLabel}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                    {/* SECTION 3: LOMBA IBU-IBU (DITAMPILKAN JIKA PASUTRI CHECKED ATAU ROLE === 'Ibu-Ibu') */}
-                    {(adultData.hasSpouse || adultData.role === 'Ibu-Ibu') && (
-                      <div className="animate-in fade-in-0 duration-200">
-                        <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                          Lomba Ibu-Ibu (Minggu, 16 Ags) <span className="text-rose-500">*</span>
-                        </label>
-                        <div className="space-y-2">
-                          {['Kepiting Air', 'Balap Kelereng di Dalam Kolam Renang'].map((item, itemIdx) => {
-                            const isChecked = adultData.selectedLomba.includes(item);
-                            const displayLabel = item;
-                            return (
-                              <button
-                                key={itemIdx}
-                                type="button"
-                                onClick={() => toggleAdultLomba(item)}
-                                className={`w-full h-[42px] px-[16px] rounded-[8px] text-[14px] flex items-center gap-[12px] transition-all cursor-pointer text-left ${
-                                  isChecked
-                                    ? 'bg-[#F2FDE4] border border-[#9EEA38] text-slate-950 font-medium shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)]'
-                                    : 'bg-white border border-slate-200/90 text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] hover:border-slate-300'
-                                }`}
-                              >
-                                <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${
-                                  isChecked ? 'bg-[#83DF22] text-slate-950' : 'border border-slate-300 bg-white'
-                                }`}>
-                                  {isChecked && <Check className="w-3 h-3 stroke-[3]" />}
-                                </div>
-                                <span>{displayLabel}</span>
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
-
-                  </div>
-
-                  {/* FIELD WHATSAPP */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={adultData.whatsapp}
-                      onChange={(e) => setAdultData({ ...adultData, whatsapp: e.target.value })}
-                      placeholder="0812xxxxxxx"
-                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Kirim Pendaftaran Dewasa
-                  </button>
-                </form>
-              )}
-
-              {/* 3. FORM PENGISI ACARA */}
-              {formType === 'performers' && (
-                <form onSubmit={handleSaveRegistration} className="space-y-4 sm:space-y-5">
-                  <div className="pb-3 border-b border-slate-100">
-                    <h3 className="text-base font-bold text-slate-900">Pengisi Acara Malam Puncak (17 Ags)</h3>
-                  </div>
-
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      Nama Penampil / Kelompok <span className="text-rose-500">*</span>
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={performerData.namaPenampil}
-                      onChange={(e) => setPerformerData({ ...performerData, namaPenampil: e.target.value })}
-                      placeholder="Nama Penampil / Kelompok"
-                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
-                  </div>
-
-                  {/* CUSTOM DROPDOWN: JENIS PENAMPILAN (FULL WIDTH) */}
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">Jenis Penampilan</label>
-                    <div className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setIsJenisPenampilanOpen(!isJenisPenampilanOpen)}
-                        className={`w-full h-[42px] px-[17px] bg-white border ${isJenisPenampilanOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
-                          } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
-                      >
-                        <span className="font-normal text-slate-900">{performerData.jenisPenampilan}</span>
-                        <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isJenisPenampilanOpen ? 'rotate-180 text-slate-700' : ''}`} />
-                      </button>
-
-                      {isJenisPenampilanOpen && (
-                        <>
-                          <div className="fixed inset-0 z-30" onClick={() => setIsJenisPenampilanOpen(false)} />
-                          <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-                            {['Pembawa Acara', 'Menyanyi', 'Menari', 'Puisi / Drama', 'Lainnya'].map((opt, index) => {
-                              const isSelected = performerData.jenisPenampilan === opt;
-                              return (
-                                <button
-                                  key={opt}
-                                  type="button"
-                                  style={{ animationDelay: `${index * 35}ms` }}
-                                  onClick={() => {
-                                    setPerformerData(prev => ({ ...prev, jenisPenampilan: opt }));
-                                    setIsJenisPenampilanOpen(false);
-                                  }}
-                                  className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${isSelected
-                                      ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
-                                      : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
-                                    }`}
-                                >
-                                  <span className="font-normal text-xs sm:text-sm">{opt}</span>
-                                  {isSelected && (
-                                    <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
-                                  )}
-                                </button>
-                              );
-                            })}
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* KATEGORI & JUMLAH ANGGOTA (2-COLUMN GRID BELOW) */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
-                    {/* CUSTOM DROPDOWN: KATEGORI */}
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Kategori</label>
+                    {/* CUSTOM DROPDOWN: JENIS PENAMPILAN */}
+                    <motion.div variants={cascadeItemVariants} className={`relative ${isJenisPenampilanOpen ? 'z-50' : 'z-20'}`}>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Jenis Penampilan</label>
                       <div className="relative">
                         <button
                           type="button"
-                          onClick={() => setIsKategoriPerformerOpen(!isKategoriPerformerOpen)}
-                          className={`w-full h-[42px] px-[17px] bg-white border ${isKategoriPerformerOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                          onClick={() => setIsJenisPenampilanOpen(!isJenisPenampilanOpen)}
+                          className={`w-full h-[42px] px-[17px] bg-white border ${isJenisPenampilanOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
                             } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
                         >
-                          <span className="font-normal text-slate-900">
-                            {performerData.tipe === 'Individu' ? 'Individu (Solo)' : 'Kelompok / Grup'}
-                          </span>
-                          <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isKategoriPerformerOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                          <span className="font-normal text-slate-900">{performerData.jenisPenampilan}</span>
+                          <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isJenisPenampilanOpen ? 'rotate-180 text-slate-700' : ''}`} />
                         </button>
 
-                        {isKategoriPerformerOpen && (
-                          <>
-                            <div className="fixed inset-0 z-30" onClick={() => setIsKategoriPerformerOpen(false)} />
-                            <div className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.2),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 animate-in fade-in-0 slide-in-from-top-2 duration-200">
-                              {[
-                                { id: 'Individu', label: 'Individu (Solo)' },
-                                { id: 'Kelompok', label: 'Kelompok / Grup' }
-                              ].map((opt, index) => {
-                                const isSelected = performerData.tipe === opt.id;
-                                return (
-                                  <button
-                                    key={opt.id}
-                                    type="button"
-                                    style={{ animationDelay: `${index * 35}ms` }}
-                                    onClick={() => {
-                                      setPerformerData(prev => ({
-                                        ...prev,
-                                        tipe: opt.id,
-                                        jumlahOrang: opt.id === 'Individu' ? '1' : (prev.jumlahOrang === '1' ? '2' : prev.jumlahOrang)
-                                      }));
-                                      setIsKategoriPerformerOpen(false);
-                                    }}
-                                    className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-all cursor-pointer animate-in fade-in-0 slide-in-from-top-1 duration-200 ${isSelected
-                                        ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
-                                        : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
-                                      }`}
-                                  >
-                                    <span className="font-normal text-xs sm:text-sm">{opt.label}</span>
-                                    {isSelected && (
-                                      <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
-                                    )}
-                                  </button>
-                                );
-                              })}
-                            </div>
-                          </>
-                        )}
+                        <AnimatePresence>
+                          {isJenisPenampilanOpen && (
+                            <>
+                              <div className="fixed inset-0 z-30" onClick={() => setIsJenisPenampilanOpen(false)} />
+                              <motion.div
+                                variants={dropdownMenuVariants}
+                                initial="hidden"
+                                animate="visible"
+                                exit="exit"
+                                style={{ originY: 0 }}
+                                className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.22),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 overflow-hidden"
+                              >
+                                {['Pembawa Acara', 'Menyanyi', 'Menari', 'Puisi / Drama', 'Lainnya'].map((opt) => {
+                                  const isSelected = performerData.jenisPenampilan === opt;
+                                  return (
+                                    <motion.button
+                                      key={opt}
+                                      variants={dropdownItemVariants}
+                                      type="button"
+                                      onClick={() => {
+                                        setPerformerData(prev => ({ ...prev, jenisPenampilan: opt }));
+                                        setIsJenisPenampilanOpen(false);
+                                      }}
+                                      className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-colors cursor-pointer active:scale-[0.99] ${isSelected
+                                          ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                          : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                        }`}
+                                    >
+                                      <span className="font-normal text-xs sm:text-sm">{opt}</span>
+                                      {isSelected && (
+                                        <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                      )}
+                                    </motion.button>
+                                  );
+                                })}
+                              </motion.div>
+                            </>
+                          )}
+                        </AnimatePresence>
                       </div>
-                    </div>
+                    </motion.div>
 
-                    {/* JUMLAH ANGGOTA (DISABLED IF INDIVIDU) */}
-                    <div>
-                      <label className="block text-[12px] font-medium text-slate-700 mb-2">Jumlah Anggota</label>
+                    {/* KATEGORI & JUMLAH ANGGOTA */}
+                    <motion.div variants={cascadeItemVariants} className={`grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3 relative ${isKategoriPerformerOpen ? 'z-50' : 'z-10'}`}>
+                      {/* CUSTOM DROPDOWN: KATEGORI */}
+                      <div>
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">Kategori</label>
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={() => setIsKategoriPerformerOpen(!isKategoriPerformerOpen)}
+                            className={`w-full h-[42px] px-[17px] bg-white border ${isKategoriPerformerOpen ? 'border-[#9EEA38] ring-2 ring-[#A3E635]/30' : 'border-slate-200/90'
+                              } rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] font-normal text-[14px] text-slate-800 flex items-center justify-between transition-all cursor-pointer`}
+                          >
+                            <span className="font-normal text-slate-900">
+                              {performerData.tipe === 'Individu' ? 'Individu (Solo)' : 'Kelompok / Grup'}
+                            </span>
+                            <ChevronDown className={`w-4 h-4 text-[#94a3b8] transition-transform duration-200 shrink-0 ${isKategoriPerformerOpen ? 'rotate-180 text-slate-700' : ''}`} />
+                          </button>
+
+                          <AnimatePresence>
+                            {isKategoriPerformerOpen && (
+                              <>
+                                <div className="fixed inset-0 z-30" onClick={() => setIsKategoriPerformerOpen(false)} />
+                                <motion.div
+                                  variants={dropdownMenuVariants}
+                                  initial="hidden"
+                                  animate="visible"
+                                  exit="exit"
+                                  style={{ originY: 0 }}
+                                  className="absolute left-0 right-0 top-full mt-2 bg-white/95 backdrop-blur-md border border-slate-200/90 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.22),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 overflow-hidden"
+                                >
+                                  {[
+                                    { id: 'Individu', label: 'Individu (Solo)' },
+                                    { id: 'Kelompok', label: 'Kelompok / Grup' }
+                                  ].map((opt) => {
+                                    const isSelected = performerData.tipe === opt.id;
+                                    return (
+                                      <motion.button
+                                        key={opt.id}
+                                        variants={dropdownItemVariants}
+                                        type="button"
+                                        onClick={() => {
+                                          setPerformerData(prev => ({
+                                            ...prev,
+                                            tipe: opt.id,
+                                            jumlahOrang: opt.id === 'Individu' ? '1' : (prev.jumlahOrang === '1' ? '2' : prev.jumlahOrang)
+                                          }));
+                                          setIsKategoriPerformerOpen(false);
+                                        }}
+                                        className={`w-full px-3.5 py-2.5 sm:py-3 rounded-xl text-xs sm:text-sm text-left flex items-center justify-between transition-colors cursor-pointer active:scale-[0.99] ${isSelected
+                                            ? 'bg-[#F2FDE4] font-medium text-slate-950 border border-[#9EEA38]/80'
+                                            : 'text-slate-700 hover:bg-slate-100/80 hover:text-slate-950 font-normal'
+                                          }`}
+                                      >
+                                        <span className="font-normal text-xs sm:text-sm">{opt.label}</span>
+                                        {isSelected && (
+                                          <Check className="w-4 h-4 text-emerald-700 stroke-[2.5] shrink-0" />
+                                        )}
+                                      </motion.button>
+                                    );
+                                  })}
+                                </motion.div>
+                              </>
+                            )}
+                          </AnimatePresence>
+                        </div>
+                      </div>
+
+                      {/* JUMLAH ANGGOTA */}
+                      <div>
+                        <label className="block text-[12px] font-medium text-slate-700 mb-2">Jumlah Anggota</label>
+                        <input
+                          type="number"
+                          min="1"
+                          disabled={performerData.tipe === 'Individu'}
+                          value={performerData.tipe === 'Individu' ? '1' : performerData.jumlahOrang}
+                          onChange={(e) => setPerformerData({ ...performerData, jumlahOrang: e.target.value })}
+                          className={`w-full h-[42px] px-[17px] border border-slate-200/90 rounded-[8px] transition-all font-normal text-[14px] ${performerData.tipe === 'Individu'
+                              ? 'bg-[#EEEEEE] text-slate-400 cursor-not-allowed'
+                              : 'bg-white text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38]'
+                            }`}
+                        />
+                      </div>
+                    </motion.div>
+
+                    <motion.div variants={cascadeItemVariants}>
+                      <label className="block text-[12px] font-medium text-slate-700 mb-2">
+                        No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
+                      </label>
                       <input
-                        type="number"
-                        min="1"
-                        disabled={performerData.tipe === 'Individu'}
-                        value={performerData.tipe === 'Individu' ? '1' : performerData.jumlahOrang}
-                        onChange={(e) => setPerformerData({ ...performerData, jumlahOrang: e.target.value })}
-                        className={`w-full h-[42px] px-[17px] border border-slate-200/90 rounded-[8px] transition-all font-normal text-[14px] ${performerData.tipe === 'Individu'
-                            ? 'bg-[#EEEEEE] text-slate-400 cursor-not-allowed'
-                            : 'bg-white text-slate-800 shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38]'
-                          }`}
+                        type="tel"
+                        value={performerData.whatsapp}
+                        onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
+                        placeholder="0812xxxxxxx"
+                        className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
                       />
-                    </div>
-                  </div>
+                    </motion.div>
 
-                  <div>
-                    <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                      No. WhatsApp <span className="text-slate-400 font-normal">(Opsional)</span>
-                    </label>
-                    <input
-                      type="tel"
-                      value={performerData.whatsapp}
-                      onChange={(e) => setPerformerData({ ...performerData, whatsapp: e.target.value })}
-                      placeholder="0812xxxxxxx"
-                      className="w-full h-[42px] px-[17px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
-                  </div>
-
-                  <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-3.5 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-2xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
-                    Daftar Pengisi Acara
-                  </button>
-                </form>
-              )}
-            </motion.div>
-          </AnimatePresence>
+                    <motion.div variants={cascadeItemVariants}>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="w-full h-[44px] bg-[#C5F542] hover:bg-[#B3EE23] active:bg-[#A6E215] text-slate-950 font-bold text-sm rounded-full shadow-[0px_-1px_3px_0px_rgba(0,0,0,0.10)] transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                      >
+                        {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />}
+                        Daftar Pengisi Acara
+                      </button>
+                    </motion.div>
+                  </motion.form>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* CARE TEAM SECTION */}
@@ -1611,21 +1945,74 @@ export default function RegistrationPlatform() {
               </div>
 
               <div className="flex items-center justify-between gap-2 pt-1">
-                <span className="text-xs font-semibold text-slate-600">Total: {filteredParticipants.length} Peserta</span>
+                <span className="text-xs font-semibold text-slate-700">{filteredParticipants.length} Peserta</span>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 relative z-30">
                   <button
                     onClick={exportToExcel}
-                    className="px-2.5 sm:px-3 py-1.5 bg-[#EAFCD7] hover:bg-[#DCF9BF] border border-[#BCE88C] text-emerald-950 text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
+                    className="px-3.5 py-1.5 bg-[#EAFCD7] hover:bg-[#DCF9BF] border border-[#BCE88C] text-emerald-950 text-xs font-bold rounded-full flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap active:scale-[0.98]"
                   >
                     <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700 shrink-0" /> Excel (.csv)
                   </button>
-                  <button
-                    onClick={() => window.print()}
-                    className="px-2.5 sm:px-3 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-xl flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap"
-                  >
-                    <Printer className="w-3.5 h-3.5 shrink-0" /> Cetak PDF
-                  </button>
+
+                  {/* CUSTOM PDF DROPDOWN BUTTON */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setPdfMenuOpen(!pdfMenuOpen)}
+                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-full flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                    >
+                      <Printer className="w-3.5 h-3.5 shrink-0" />
+                      <span>Cetak PDF</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform duration-200 ${pdfMenuOpen ? 'rotate-180 text-white' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {pdfMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setPdfMenuOpen(false)} />
+                          <motion.div
+                            variants={dropdownMenuVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            style={{ originY: 0 }}
+                            className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
+                          >
+                            <motion.button
+                              variants={dropdownItemVariants}
+                              type="button"
+                              onClick={() => triggerPdfPrint('general')}
+                              className="w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 hover:bg-slate-100/90 cursor-pointer transition-colors group active:scale-[0.99]"
+                            >
+                              <div className="w-7 h-7 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-slate-800">
+                                <FileText className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-xs text-slate-900">1. Format General</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Tabel daftar peserta berurutan</div>
+                              </div>
+                            </motion.button>
+
+                            <motion.button
+                              variants={dropdownItemVariants}
+                              type="button"
+                              onClick={() => triggerPdfPrint('grouping')}
+                              className="w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 hover:bg-[#F2FDE4] hover:border hover:border-[#9EEA38]/60 cursor-pointer transition-colors group active:scale-[0.99]"
+                            >
+                              <div className="w-7 h-7 bg-[#EAFCD7] rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-emerald-800">
+                                <Layers className="w-4 h-4" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-xs text-slate-900">2. Format Grouping Lomba</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Dikelompokkan per Jenis Lomba & Acara</div>
+                              </div>
+                            </motion.button>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1865,7 +2252,6 @@ export default function RegistrationPlatform() {
                       maxLength={4}
                       inputMode="numeric"
                       pattern="[0-9]*"
-                      autoFocus
                       required
                       value={pinInput}
                       onChange={(e) => {
@@ -1902,9 +2288,9 @@ export default function RegistrationPlatform() {
                     </button>
                     <button
                       type="submit"
-                      className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-xl shadow-xs cursor-pointer flex items-center justify-center gap-1.5 transition-colors active:scale-95"
+                      className="flex-1 h-[44px] bg-[#C5F542] hover:bg-[#B3EE23] active:bg-[#A6E215] text-slate-950 font-bold text-xs rounded-full shadow-[0px_-1px_3px_0px_rgba(0,0,0,0.10)] cursor-pointer flex items-center justify-center gap-1.5 transition-colors active:scale-[0.99]"
                     >
-                      <KeyRound className="w-4 h-4" /> Masuk Admin
+                      <KeyRound className="w-4 h-4 stroke-[2.5]" /> Masuk Admin
                     </button>
                   </div>
                 </form>
@@ -2002,7 +2388,7 @@ export default function RegistrationPlatform() {
             <div className="print:hidden flex gap-2">
               <button
                 onClick={() => window.print()}
-                className="flex-1 py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-2xl flex items-center justify-center gap-1 cursor-pointer"
+                className="flex-1 h-[44px] bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold text-xs rounded-full flex items-center justify-center gap-1 cursor-pointer transition-colors active:scale-[0.99]"
               >
                 <Printer className="w-4 h-4" /> Cetak
               </button>
@@ -2010,7 +2396,7 @@ export default function RegistrationPlatform() {
                 onClick={() => {
                   setTicketModal(null);
                 }}
-                className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-2xl flex items-center justify-center gap-1 cursor-pointer"
+                className="flex-1 h-[44px] bg-[#C5F542] hover:bg-[#B3EE23] active:bg-[#A6E215] text-slate-950 font-bold text-xs rounded-full shadow-[0px_-1px_3px_0px_rgba(0,0,0,0.10)] flex items-center justify-center gap-1 cursor-pointer transition-colors active:scale-[0.99]"
               >
                 Tutup
               </button>
@@ -2063,94 +2449,102 @@ export default function RegistrationPlatform() {
               className="fixed inset-0 bg-black/60 backdrop-blur-xs cursor-pointer"
             />
 
-            {/* Modal Dialog Container */}
+            {/* Modal Dialog Container (Matching Figma 242:1362) */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white border border-slate-200/90 w-full max-w-[92vw] sm:max-w-md rounded-[28px] p-6 sm:p-7 shadow-2xl relative z-10 text-slate-900 space-y-5"
+              transition={{ duration: 0.25, ease: [0.16, 1, 0.3, 1] }}
+              className="bg-white border border-slate-200/90 w-full max-w-[92vw] sm:max-w-[380px] rounded-[32px] overflow-hidden shadow-2xl relative z-10 text-slate-900"
             >
-              {/* HEADING BASED ON MODE */}
-              {houseModalMode === 'welcome' ? (
-                <div>
-                  <h3 className="font-bold text-slate-900 text-base sm:text-[18px] leading-snug">
+              {/* TOP ILLUSTRATION BANNER IMAGE (ABSOLUTE TOP) */}
+              <div className="relative w-full h-[185px] sm:h-[200px] overflow-hidden bg-amber-50">
+                <img
+                  src="/dialog-seion.png"
+                  alt="Illustration"
+                  className="w-full h-[250px] object-cover object-top select-none pointer-events-none"
+                />
+                {/* BOTTOM GRADIENT FADE TO WHITE */}
+                <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-white via-white/70 to-transparent" />
+
+                {/* CLOSE BUTTON IF EDIT MODE */}
+                {houseModalMode === 'edit' && globalHouseBlock && (
+                  <button
+                    type="button"
+                    onClick={() => setIsHouseModalOpen(false)}
+                    className="absolute right-3.5 top-3.5 w-8 h-8 bg-white/80 hover:bg-white backdrop-blur-md text-slate-700 rounded-full flex items-center justify-center cursor-pointer transition-all shadow-xs z-20"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+
+              {/* DIALOG CONTENT BODY */}
+              <div className="p-5 sm:p-6 pt-2 sm:pt-3 space-y-4 sm:space-y-5">
+                {/* HEADING TEXT MATCHING FIGMA */}
+                <div className="space-y-1 pb-3.5 sm:pb-4 border-b border-slate-100/90">
+                  <h3 className="font-bold text-slate-900 text-[15px] sm:text-[16px] leading-snug">
                     Selamat datang di form pendaftaran
                   </h3>
-                  <p className="text-xs sm:text-sm text-slate-600 font-normal mt-1 leading-relaxed">
-                    Agar lebih mudah tulis blok dan nomor rumah dahulu ya.
+                  <p className="font-semibold text-slate-900 text-[15px] sm:text-[16px] leading-snug">
+                    Agar lebih mudah tulis blok dan<br />nomor rumah dahulu ya.
                   </p>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-                  <h3 className="font-bold text-slate-900 text-base sm:text-[18px]">
-                    Ubah Nomor Rumah
-                  </h3>
-                  {globalHouseBlock && (
-                    <button
-                      type="button"
-                      onClick={() => setIsHouseModalOpen(false)}
-                      className="p-1 text-slate-400 hover:text-slate-600 rounded-full cursor-pointer"
-                    >
-                      <X className="w-4 h-4" />
-                    </button>
-                  )}
-                </div>
-              )}
 
-              {/* FORM INPUTS MATCHING SCREENSHOT 1 */}
-              <form onSubmit={handleSaveHouseBlock} className="space-y-5">
-                <div>
-                  <label className="block text-[12px] font-medium text-slate-700 mb-2">
-                    Blok / No. Rumah <span className="text-rose-500">*</span>
-                  </label>
-                  <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
-                    {/* DROPDOWN BLOK (ONLY B AND C) */}
-                    <div className="relative">
-                      <select
+                {/* FORM INPUTS MATCHING FIGMA DESIGN */}
+                <form onSubmit={handleSaveHouseBlock} className="space-y-4 sm:space-y-5">
+                  <div>
+                    <label className="block text-[12px] font-semibold text-slate-700 mb-2">
+                      Blok / No. Rumah <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="grid grid-cols-3 gap-2 sm:gap-2.5">
+                      {/* DROPDOWN BLOK */}
+                      <div className="relative">
+                        <select
+                          required
+                          value={selectedBlokPrefix}
+                          onChange={(e) => setSelectedBlokPrefix(e.target.value as 'B' | 'C')}
+                          className="w-full h-[44px] px-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 appearance-none cursor-pointer"
+                        >
+                          <option value="" disabled>Blok</option>
+                          <option value="B">B</option>
+                          <option value="C">C</option>
+                        </select>
+                        <ChevronDown className="w-4 h-4 text-slate-400 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                      </div>
+
+                      {/* SUB-BLOK NUMBER INPUT */}
+                      <input
+                        type="text"
                         required
-                        value={selectedBlokPrefix}
-                        onChange={(e) => setSelectedBlokPrefix(e.target.value as 'B' | 'C')}
-                        className="w-full h-[42px] px-3 bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 appearance-none cursor-pointer"
-                      >
-                        <option value="" disabled>Blok</option>
-                        <option value="B">B</option>
-                        <option value="C">C</option>
-                      </select>
-                      <ChevronDown className="w-4 h-4 text-slate-400 absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        value={subBlokInput}
+                        onChange={(e) => setSubBlokInput(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="15"
+                        className="w-full h-[44px] px-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                      />
+
+                      {/* HOUSE NUMBER INPUT */}
+                      <input
+                        type="text"
+                        required
+                        value={noRumahInput}
+                        onChange={(e) => setNoRumahInput(e.target.value.replace(/[^0-9]/g, ''))}
+                        placeholder="No."
+                        className="w-full h-[44px] px-3.5 bg-white border border-slate-200/90 rounded-2xl shadow-[0px_1px_2px_0px_rgba(0,0,0,0.04)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
+                      />
                     </div>
-
-                    {/* SUB-BLOK NUMBER INPUT (e.g. 10 or 9) */}
-                    <input
-                      type="text"
-                      required
-                      value={subBlokInput}
-                      onChange={(e) => setSubBlokInput(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="15"
-                      className="w-full h-[42px] px-[14px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
-
-                    {/* HOUSE NUMBER INPUT (e.g. 24 or 23) */}
-                    <input
-                      type="text"
-                      required
-                      value={noRumahInput}
-                      onChange={(e) => setNoRumahInput(e.target.value.replace(/[^0-9]/g, ''))}
-                      placeholder="No."
-                      className="w-full h-[42px] px-[14px] bg-white border border-slate-200/90 rounded-[8px] shadow-[0px_1px_2px_0px_rgba(0,0,0,0.06)] focus:outline-none focus:ring-2 focus:ring-[#A3E635] focus:border-[#9EEA38] transition-all font-normal text-[14px] text-slate-800 placeholder:font-normal placeholder:text-[#94a3b8]"
-                    />
                   </div>
-                </div>
 
-                {/* LANJUTKAN BUTTON */}
-                <button
-                  type="submit"
-                  className="w-full h-[46px] bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-xl shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-                >
-                  <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
-                  Lanjutkan
-                </button>
-              </form>
+                  {/* LANJUTKAN BUTTON MATCHING FIGMA LIME PILL BUTTON */}
+                  <button
+                    type="submit"
+                    className="w-full h-[48px] bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-sm rounded-full shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                  >
+                    <CheckCircle2 className="w-4 h-4 stroke-[2.5]" />
+                    <span>Lanjutkan</span>
+                  </button>
+                </form>
+              </div>
             </motion.div>
           </div>
         )}
