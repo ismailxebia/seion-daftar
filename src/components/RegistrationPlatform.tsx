@@ -146,6 +146,10 @@ export default function RegistrationPlatform() {
   const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
   const [pdfFormat, setPdfFormat] = useState<'general' | 'grouping'>('general');
 
+  // Pagination State
+  const [currentPage, setCurrentPage] = useState(1);
+  const ITEMS_PER_PAGE = 10;
+
   const triggerPdfPrint = (format: 'general' | 'grouping') => {
     setPdfFormat(format);
     setPdfMenuOpen(false);
@@ -832,6 +836,17 @@ export default function RegistrationPlatform() {
       p.lomba?.some(l => l.toLowerCase().includes(q))
     );
   });
+
+  // Reset page whenever search query changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredParticipants.length / ITEMS_PER_PAGE));
+  const paginatedParticipants = filteredParticipants.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
 
   const selectedGroupObj = AGE_GROUPS.find(g => g.id === childData.tingkatanId);
   const activeSelectedCategoryObj = selectedGroupObj;
@@ -2023,37 +2038,126 @@ export default function RegistrationPlatform() {
                 Belum ada data peserta pendaftaran.
               </div>
             ) : (
-              <div className="space-y-2.5">
-                {filteredParticipants.map((p) => (
-                  <div key={p.id} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-[#BCE88C] transition-all space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                        <span>{p.namaPeserta}</span>
-                        {p.umur && <span className="text-xs text-slate-500 font-normal">({p.umur} Thn)</span>}
-                      </h4>
-                      <button
-                        onClick={() => setDeleteModalId(p.id)}
-                        className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0 transition-colors"
+              <div className="space-y-4">
+                {/* PARTICIPANT CARDS */}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentPage}
+                    initial={{ opacity: 0, y: 6 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -6 }}
+                    transition={{ duration: 0.18, ease: [0.16, 1, 0.3, 1] }}
+                    className="space-y-2.5"
+                  >
+                    {paginatedParticipants.map((p, idx) => (
+                      <motion.div
+                        key={p.id}
+                        initial={{ opacity: 0, y: 8, filter: 'blur(4px)' }}
+                        animate={{ opacity: 1, y: 0, filter: 'blur(0px)' }}
+                        transition={{ duration: 0.18, delay: idx * 0.03, ease: [0.16, 1, 0.3, 1] }}
+                        className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-[#BCE88C] transition-colors space-y-2.5"
                       >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+                        <div className="flex items-center justify-between">
+                          <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                            <span className="text-[10px] font-mono text-slate-400 font-normal mr-0.5">
+                              #{(currentPage - 1) * ITEMS_PER_PAGE + idx + 1}
+                            </span>
+                            <span>{p.namaPeserta}</span>
+                            {p.umur && <span className="text-xs text-slate-500 font-normal">({p.umur} Thn)</span>}
+                          </h4>
+                          <button
+                            onClick={() => setDeleteModalId(p.id)}
+                            className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0 transition-colors"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        <div className="text-xs text-slate-600 space-y-1 bg-[#F8F9FA] p-3 rounded-xl">
+                          <p className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">{p.type} • {p.kategoriGroup}</p>
+                          <ul className="list-disc list-inside text-slate-800 font-semibold space-y-0.5 pt-0.5">
+                            {p.lomba?.map((l, i) => <li key={i}>{l}</li>)}
+                          </ul>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-0.5">
+                          <span className="text-[10px] font-mono font-extrabold text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-md">
+                            {p.code}
+                          </span>
+                          <span className="text-[11px] font-semibold text-slate-700">Blok: {p.blokRumah}</span>
+                        </div>
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                </AnimatePresence>
+
+                {/* PAGINATION CONTROLS */}
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-between gap-2 pt-1">
+                    {/* Prev Button */}
+                    <button
+                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-[0.97] disabled:opacity-35 disabled:cursor-not-allowed bg-white border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      <ChevronDown className="w-3.5 h-3.5 rotate-90" />
+                      Prev
+                    </button>
+
+                    {/* Page Numbers */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => {
+                        const isActive = page === currentPage;
+                        // Show: first, last, current ±1, and ellipsis
+                        const showPage =
+                          page === 1 ||
+                          page === totalPages ||
+                          Math.abs(page - currentPage) <= 1;
+                        const showEllipsisBefore = page === currentPage - 2 && currentPage - 2 > 1;
+                        const showEllipsisAfter = page === currentPage + 2 && currentPage + 2 < totalPages;
+
+                        if (!showPage) {
+                          if (showEllipsisBefore || showEllipsisAfter) {
+                            return (
+                              <span key={page} className="w-7 text-center text-slate-400 text-xs">…</span>
+                            );
+                          }
+                          return null;
+                        }
+
+                        return (
+                          <motion.button
+                            key={page}
+                            onClick={() => setCurrentPage(page)}
+                            whileTap={{ scale: 0.92 }}
+                            className={`w-7 h-7 rounded-full text-xs font-bold cursor-pointer transition-all ${
+                              isActive
+                                ? 'bg-slate-900 text-white shadow-sm'
+                                : 'text-slate-500 hover:bg-slate-100 hover:text-slate-800'
+                            }`}
+                          >
+                            {page}
+                          </motion.button>
+                        );
+                      })}
                     </div>
 
-                    <div className="text-xs text-slate-600 space-y-1 bg-[#F8F9FA] p-3 rounded-xl">
-                      <p className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">{p.type} • {p.kategoriGroup}</p>
-                      <ul className="list-disc list-inside text-slate-800 font-semibold space-y-0.5 pt-0.5">
-                        {p.lomba?.map((l, i) => <li key={i}>{l}</li>)}
-                      </ul>
-                    </div>
-
-                    <div className="flex items-center justify-between pt-0.5">
-                      <span className="text-[10px] font-mono font-extrabold text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-md">
-                        {p.code}
-                      </span>
-                      <span className="text-[11px] font-semibold text-slate-700">Blok: {p.blokRumah}</span>
-                    </div>
+                    {/* Next Button */}
+                    <button
+                      onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold border transition-all cursor-pointer active:scale-[0.97] disabled:opacity-35 disabled:cursor-not-allowed bg-white border-slate-200 text-slate-700 hover:border-slate-400 hover:bg-slate-50"
+                    >
+                      Next
+                      <ChevronDown className="w-3.5 h-3.5 -rotate-90" />
+                    </button>
                   </div>
-                ))}
+                )}
+
+                {/* Page Info */}
+                <p className="text-center text-[10.5px] text-slate-400 font-normal pb-1">
+                  Halaman {currentPage} dari {totalPages} &nbsp;·&nbsp; {filteredParticipants.length} Peserta
+                </p>
               </div>
             )}
 
