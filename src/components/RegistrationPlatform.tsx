@@ -336,10 +336,6 @@ export default function RegistrationPlatform() {
           } else if (['Tendangan Penalti', 'Lempar Bola Pakai Sarung'].includes(clean)) {
             if (l.includes('Ibu-Ibu')) {
               ibuLomba.push(clean);
-            } else if (l.includes('Bapak-Bapak')) {
-              bapakLomba.push(clean);
-            } else if (adultData.role === 'Ibu-Ibu') {
-              ibuLomba.push(clean);
             } else {
               bapakLomba.push(clean);
             }
@@ -515,10 +511,6 @@ export default function RegistrationPlatform() {
       } else if (['Tendangan Penalti', 'Lempar Bola Pakai Sarung'].includes(clean)) {
         if (l.includes('Ibu-Ibu')) {
           ibu.push(clean);
-        } else if (l.includes('Bapak-Bapak')) {
-          bapak.push(clean);
-        } else if (role === 'Ibu-Ibu') {
-          ibu.push(clean);
         } else {
           bapak.push(clean);
         }
@@ -551,10 +543,6 @@ export default function RegistrationPlatform() {
             ibuLomba.push(clean);
           } else if (['Tendangan Penalti', 'Lempar Bola Pakai Sarung'].includes(clean)) {
             if (l.includes('Ibu-Ibu')) {
-              ibuLomba.push(clean);
-            } else if (l.includes('Bapak-Bapak')) {
-              bapakLomba.push(clean);
-            } else if (p.role === 'Ibu-Ibu') {
               ibuLomba.push(clean);
             } else {
               bapakLomba.push(clean);
@@ -2021,9 +2009,6 @@ export default function RegistrationPlatform() {
               <button
                 onClick={() => {
                   setTicketModal(null);
-                  if (isAdminUnlocked) {
-                    setActiveTab('participants');
-                  }
                 }}
                 className="flex-1 py-3 bg-[#C5F542] hover:bg-[#B3EE23] text-slate-950 font-bold text-xs rounded-2xl flex items-center justify-center gap-1 cursor-pointer"
               >
