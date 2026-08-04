@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import {
-  Calendar, Search,
+  Calendar, Search, Filter, Download,
   Trash2, Printer, FileSpreadsheet, Phone,
   Check, ChevronDown, Users, AlertCircle, RefreshCw,
   Clock, Home, X, CheckCircle2, Lock, KeyRound, ShieldCheck,
@@ -142,8 +142,10 @@ export default function RegistrationPlatform() {
   const [isJenisPenampilanOpen, setIsJenisPenampilanOpen] = useState(false);
   const [isKategoriPerformerOpen, setIsKategoriPerformerOpen] = useState(false);
 
-  // PDF Format Dropdown State
-  const [pdfMenuOpen, setPdfMenuOpen] = useState(false);
+  // Export & Filter State
+  const [exportMenuOpen, setExportMenuOpen] = useState(false);
+  const [filterMenuOpen, setFilterMenuOpen] = useState(false);
+  const [groupingMode, setGroupingMode] = useState<'default' | 'blok' | 'lomba'>('default');
   const [pdfFormat, setPdfFormat] = useState<'general' | 'grouping'>('general');
 
   // Infinite Scroll State
@@ -153,7 +155,7 @@ export default function RegistrationPlatform() {
 
   const triggerPdfPrint = (format: 'general' | 'grouping') => {
     setPdfFormat(format);
-    setPdfMenuOpen(false);
+    setExportMenuOpen(false);
     setTimeout(() => {
       window.print();
     }, 100);
@@ -838,10 +840,95 @@ export default function RegistrationPlatform() {
     );
   });
 
-  // Reset visible count whenever search query changes
+  // Grouping by Blok Rumah
+  const groupedByBlok = React.useMemo(() => {
+    const map: { [key: string]: typeof filteredParticipants } = {};
+    filteredParticipants.forEach(p => {
+      const key = p.blokRumah || 'Lainnya';
+      if (!map[key]) map[key] = [];
+      map[key].push(p);
+    });
+    return Object.keys(map).sort().map(key => ({
+      blokKey: key,
+      items: map[key]
+    }));
+  }, [filteredParticipants]);
+
+  // Helper to strip out dates & role tags from lomba title for clean display
+  const cleanLombaTitle = (title: string) => {
+    if (!title) return '';
+    return title
+      .replace(/\s*\((Minggu|Senin|Sabtu|Jumat|Selasa|Rabu|Kamis),\s*\d+\s*Ags\)/gi, '')
+      .replace(/\s*\(Bapak-Bapak\)/gi, '')
+      .replace(/\s*\(Ibu-Ibu\)/gi, '')
+      .trim();
+  };
+
+  // Priority mapping for chronological event schedule sorting
+  const getLombaPriority = (title: string): number => {
+    const clean = cleanLombaTitle(title);
+
+    // 1. Lomba Ketangkasan Anak (Minggu, 9 Ags)
+    if (clean.includes('Mencocokan Warna') || clean.includes('Spons')) return 10;
+    if (clean.includes('Pindahkan Karet') || clean.includes('Pindahkan Air ke Botol')) return 11;
+    if (clean.includes('Lari dengan Balon') || clean.includes('Pindahkan Air dengan Sedotan') || clean.includes('Estafet Gelas')) return 12;
+    if (clean.includes('Sedotan ke Botol') || clean.includes('Tiup Bola') || clean.includes('Estafet Hanger')) return 13;
+    if (clean.includes('Bola dari Kardus') || clean.includes('Gelas dengan Balon') || clean.includes('Bola Poli')) return 14;
+
+    // 2. Lomba Mewarnai (Sabtu, 15 Ags)
+    if (clean.includes('Mewarnai')) return 20;
+
+    // 3. Lomba Parade Sepeda Hias (Minggu, 16 Ags)
+    if (clean.includes('Parade Sepeda Hias')) return 30;
+
+    // 4. Lomba Dewasa & Pasutri (Minggu, 16 Ags)
+    if (clean.includes('Tendangan Penalti')) return 40;
+    if (clean.includes('Lempar Bola')) return 41;
+    if (clean.includes('Kepiting Air')) return 42;
+    if (clean.includes('Balap Kelereng')) return 43;
+    if (clean.includes('Make Up Pasangan')) return 44;
+    if (clean.includes('Joget Balon')) return 45;
+
+    // 5. Fashion Show Nusantara (Senin, 17 Ags)
+    if (clean.includes('Fashion Show')) return 50;
+
+    // 6. Pengisi Acara Malam Puncak (Senin, 17 Ags)
+    if (clean.includes('Pengisi Acara')) return 60;
+
+    return 99;
+  };
+
+  // Grouping by Lomba / Acara (Sorted Chronologically & Clean Title)
+  const groupedByLomba = React.useMemo(() => {
+    const map: { [cleanTitle: string]: typeof filteredParticipants } = {};
+    filteredParticipants.forEach(p => {
+      const list = (p.lomba && p.lomba.length > 0) ? p.lomba : ['Lainnya'];
+      list.forEach(rawTitle => {
+        const cleanTitle = cleanLombaTitle(rawTitle);
+        if (!map[cleanTitle]) map[cleanTitle] = [];
+        if (!map[cleanTitle].some(existing => existing.id === p.id)) {
+          map[cleanTitle].push(p);
+        }
+      });
+    });
+
+    const sortedKeys = Object.keys(map).sort((a, b) => {
+      const priorityA = getLombaPriority(a);
+      const priorityB = getLombaPriority(b);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.localeCompare(b);
+    });
+
+    return sortedKeys.map(key => ({
+      lombaKey: key,
+      items: map[key]
+    }));
+  }, [filteredParticipants]);
+
+  // Reset visible count whenever search query or grouping mode changes
   useEffect(() => {
     setVisibleCount(ITEMS_PER_BATCH);
-  }, [searchQuery]);
+  }, [searchQuery, groupingMode]);
 
   const visibleParticipants = filteredParticipants.slice(0, visibleCount);
   const hasMore = visibleCount < filteredParticipants.length;
@@ -1949,7 +2036,6 @@ export default function RegistrationPlatform() {
                 ))}
               </div>
             </div>
-
           </div>
         )}
 
@@ -1957,6 +2043,7 @@ export default function RegistrationPlatform() {
         {activeTab === 'participants' && isAdminUnlocked && (
           <div className="relative z-10 space-y-4">
             <div className="bg-white p-4 border border-slate-200/80 rounded-3xl shadow-2xs space-y-3">
+              {/* Search Bar */}
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -1968,33 +2055,30 @@ export default function RegistrationPlatform() {
                 />
               </div>
 
-              <div className="flex items-center justify-between gap-2 pt-1">
-                <span className="text-xs font-semibold text-slate-700">{filteredParticipants.length} Peserta</span>
+              {/* Action Bar (Counter + Icon-only Filter Button + Single Unified Export Button) */}
+              <div className="flex items-center justify-between gap-2 pt-3.5 border-t border-slate-100 mt-2">
+                <span className="text-xs font-bold text-slate-800">{filteredParticipants.length} Peserta</span>
 
-                <div className="flex gap-2 relative z-30">
-                  <button
-                    onClick={exportToExcel}
-                    className="px-3.5 py-1.5 bg-[#EAFCD7] hover:bg-[#DCF9BF] border border-[#BCE88C] text-emerald-950 text-xs font-bold rounded-full flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap active:scale-[0.98]"
-                  >
-                    <FileSpreadsheet className="w-3.5 h-3.5 text-emerald-700 shrink-0" /> Excel (.csv)
-                  </button>
-
-                  {/* CUSTOM PDF DROPDOWN BUTTON */}
+                <div className="flex items-center gap-2 relative z-30">
+                  {/* FILTER BUTTON (ICON ONLY + RADIO POPUP) */}
                   <div className="relative">
                     <button
                       type="button"
-                      onClick={() => setPdfMenuOpen(!pdfMenuOpen)}
-                      className="px-3.5 py-1.5 bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold rounded-full flex items-center gap-1.5 transition-colors cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                      onClick={() => setFilterMenuOpen(!filterMenuOpen)}
+                      title="Filter Tampilan & Grouping"
+                      className={`w-9 h-9 rounded-full border flex items-center justify-center transition-all cursor-pointer shrink-0 active:scale-[0.96] ${
+                        groupingMode !== 'default'
+                          ? 'bg-[#EAFCD7] border-[#9EEA38] text-emerald-950 shadow-2xs ring-2 ring-[#9EEA38]/30'
+                          : 'bg-[#F8F9FA] hover:bg-slate-100 border-slate-200 text-slate-700'
+                      }`}
                     >
-                      <Printer className="w-3.5 h-3.5 shrink-0" />
-                      <span>Cetak PDF</span>
-                      <ChevronDown className={`w-3.5 h-3.5 text-slate-300 transition-transform duration-200 ${pdfMenuOpen ? 'rotate-180 text-white' : ''}`} />
+                      <Filter className="w-4 h-4" />
                     </button>
 
                     <AnimatePresence>
-                      {pdfMenuOpen && (
+                      {filterMenuOpen && (
                         <>
-                          <div className="fixed inset-0 z-30" onClick={() => setPdfMenuOpen(false)} />
+                          <div className="fixed inset-0 z-30" onClick={() => setFilterMenuOpen(false)} />
                           <motion.div
                             variants={dropdownMenuVariants}
                             initial="hidden"
@@ -2003,6 +2087,128 @@ export default function RegistrationPlatform() {
                             style={{ originY: 0 }}
                             className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
                           >
+                            <div className="px-3 py-1.5 text-[10.5px] font-extrabold uppercase tracking-wider text-slate-400">
+                              Tampilan & Grouping Data
+                            </div>
+
+                            {/* Radio Option 1: Default */}
+                            <motion.button
+                              variants={dropdownItemVariants}
+                              type="button"
+                              onClick={() => {
+                                setGroupingMode('default');
+                                setFilterMenuOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 cursor-pointer transition-colors group active:scale-[0.99] ${
+                                groupingMode === 'default' ? 'bg-[#F2FDE4] font-bold text-slate-900' : 'hover:bg-slate-100/90 text-slate-700'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                                groupingMode === 'default' ? 'border-[#83DF22] bg-[#83DF22]' : 'border-slate-300'
+                              }`}>
+                                {groupingMode === 'default' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-900">Default (Terbaru)</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Urut pendaftaran terbaru</div>
+                              </div>
+                            </motion.button>
+
+                            {/* Radio Option 2: Grouping per Blok Rumah */}
+                            <motion.button
+                              variants={dropdownItemVariants}
+                              type="button"
+                              onClick={() => {
+                                setGroupingMode('blok');
+                                setFilterMenuOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 cursor-pointer transition-colors group active:scale-[0.99] ${
+                                groupingMode === 'blok' ? 'bg-[#F2FDE4] font-bold text-slate-900' : 'hover:bg-slate-100/90 text-slate-700'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                                groupingMode === 'blok' ? 'border-[#83DF22] bg-[#83DF22]' : 'border-slate-300'
+                              }`}>
+                                {groupingMode === 'blok' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-900">Group: Blok Rumah</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Dikelompokkan per section Blok</div>
+                              </div>
+                            </motion.button>
+
+                            {/* Radio Option 3: Grouping per Cabang Lomba */}
+                            <motion.button
+                              variants={dropdownItemVariants}
+                              type="button"
+                              onClick={() => {
+                                setGroupingMode('lomba');
+                                setFilterMenuOpen(false);
+                              }}
+                              className={`w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 cursor-pointer transition-colors group active:scale-[0.99] ${
+                                groupingMode === 'lomba' ? 'bg-[#F2FDE4] font-bold text-slate-900' : 'hover:bg-slate-100/90 text-slate-700'
+                              }`}
+                            >
+                              <div className={`w-4 h-4 rounded-full border flex items-center justify-center shrink-0 mt-0.5 ${
+                                groupingMode === 'lomba' ? 'border-[#83DF22] bg-[#83DF22]' : 'border-slate-300'
+                              }`}>
+                                {groupingMode === 'lomba' && <div className="w-1.5 h-1.5 rounded-full bg-slate-950" />}
+                              </div>
+                              <div>
+                                <div className="text-xs font-bold text-slate-900">Group: Cabang Lomba</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Dikelompokkan per jenis lomba</div>
+                              </div>
+                            </motion.button>
+                          </motion.div>
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  {/* SINGLE UNIFIED EXPORT BUTTON */}
+                  <div className="relative">
+                    <button
+                      type="button"
+                      onClick={() => setExportMenuOpen(!exportMenuOpen)}
+                      className="h-9 px-3.5 bg-[#C5F542] hover:bg-[#B3EE23] active:bg-[#A6E215] text-slate-950 text-xs font-bold rounded-full flex items-center gap-1.5 transition-all shadow-[0px_-1px_3px_0px_rgba(0,0,0,0.10)] cursor-pointer whitespace-nowrap active:scale-[0.98]"
+                    >
+                      <Download className="w-3.5 h-3.5 shrink-0 text-slate-950 stroke-[2.2]" />
+                      <span>Export</span>
+                      <ChevronDown className={`w-3.5 h-3.5 text-slate-900 transition-transform duration-200 ${exportMenuOpen ? 'rotate-180' : ''}`} />
+                    </button>
+
+                    <AnimatePresence>
+                      {exportMenuOpen && (
+                        <>
+                          <div className="fixed inset-0 z-30" onClick={() => setExportMenuOpen(false)} />
+                          <motion.div
+                            variants={dropdownMenuVariants}
+                            initial="hidden"
+                            animate="visible"
+                            exit="exit"
+                            style={{ originY: 0 }}
+                            className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
+                          >
+                            {/* Option 1: Excel (.csv) */}
+                            <motion.button
+                              variants={dropdownItemVariants}
+                              type="button"
+                              onClick={() => {
+                                exportToExcel();
+                                setExportMenuOpen(false);
+                              }}
+                              className="w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 hover:bg-[#F2FDE4] cursor-pointer transition-colors group active:scale-[0.99]"
+                            >
+                              <div className="w-7 h-7 bg-[#EAFCD7] rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-emerald-800">
+                                <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                              </div>
+                              <div>
+                                <div className="font-bold text-xs text-slate-900">1. Excel (.csv)</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Spreadsheet data peserta</div>
+                              </div>
+                            </motion.button>
+
+                            {/* Option 2: PDF General */}
                             <motion.button
                               variants={dropdownItemVariants}
                               type="button"
@@ -2010,14 +2216,15 @@ export default function RegistrationPlatform() {
                               className="w-full px-3 py-2 rounded-xl text-left flex items-start gap-2.5 hover:bg-slate-100/90 cursor-pointer transition-colors group active:scale-[0.99]"
                             >
                               <div className="w-7 h-7 bg-slate-100 group-hover:bg-slate-200 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-slate-800">
-                                <FileText className="w-4 h-4" />
+                                <Printer className="w-4 h-4" />
                               </div>
                               <div>
-                                <div className="font-bold text-xs text-slate-900">1. Format General</div>
-                                <div className="text-[10.5px] text-slate-500 font-normal">Tabel daftar peserta berurutan</div>
+                                <div className="font-bold text-xs text-slate-900">2. PDF Format General</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Tabel ringkas peserta berurutan</div>
                               </div>
                             </motion.button>
 
+                            {/* Option 3: PDF Grouping */}
                             <motion.button
                               variants={dropdownItemVariants}
                               type="button"
@@ -2028,8 +2235,8 @@ export default function RegistrationPlatform() {
                                 <Layers className="w-4 h-4" />
                               </div>
                               <div>
-                                <div className="font-bold text-xs text-slate-900">2. Format Grouping Lomba</div>
-                                <div className="text-[10.5px] text-slate-500 font-normal">Dikelompokkan per Jenis Lomba & Acara</div>
+                                <div className="font-bold text-xs text-slate-900">3. PDF Grouping Lomba</div>
+                                <div className="text-[10.5px] text-slate-500 font-normal">Dikelompokkan per Kategori & Lomba</div>
                               </div>
                             </motion.button>
                           </motion.div>
@@ -2046,7 +2253,110 @@ export default function RegistrationPlatform() {
                 <Users className="w-8 h-8 text-slate-300 mx-auto mb-2" />
                 Belum ada data peserta pendaftaran.
               </div>
+            ) : groupingMode === 'blok' ? (
+              /* SECTION BY SECTION: BLOK RUMAH */
+              <div className="space-y-5">
+                {groupedByBlok.map(({ blokKey, items }) => (
+                  <div key={blokKey} className="space-y-2.5">
+                    <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xs">
+                      <span className="flex items-center gap-2">
+                        <Home className="w-4 h-4 text-[#C5F542]" />
+                        <span>Blok {blokKey}</span>
+                      </span>
+                      <span className="text-[10.5px] font-extrabold text-[#C5F542] bg-slate-800 px-2.5 py-0.5 rounded-full">
+                        {items.length} Peserta
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {items.map((p, idx) => (
+                        <div key={p.id || idx} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-[#BCE88C] transition-colors space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-slate-400 font-normal mr-0.5">#{idx + 1}</span>
+                              <span>{p.namaPeserta}</span>
+                              {p.umur && <span className="text-xs text-slate-500 font-normal">({p.umur} Thn)</span>}
+                            </h4>
+                            <button
+                              onClick={() => setDeleteModalId(p.id)}
+                              className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="text-xs text-slate-600 space-y-1 bg-[#F8F9FA] p-3 rounded-xl">
+                            <p className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">{p.type} • {p.kategoriGroup}</p>
+                            <ul className="list-disc list-inside text-slate-800 font-semibold space-y-0.5 pt-0.5">
+                              {p.lomba?.map((l, i) => <li key={i}>{cleanLombaTitle(l)}</li>)}
+                            </ul>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-0.5">
+                            <span className="text-[10px] font-mono font-extrabold text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-md">
+                              {p.code}
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-700">Blok: {p.blokRumah}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : groupingMode === 'lomba' ? (
+              /* SECTION BY SECTION: CABANG LOMBA */
+              <div className="space-y-5">
+                {groupedByLomba.map(({ lombaKey, items }) => (
+                  <div key={lombaKey} className="space-y-2.5">
+                    <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xs">
+                      <span className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-[#C5F542]" />
+                        <span>{lombaKey}</span>
+                      </span>
+                      <span className="text-[10.5px] font-extrabold text-[#C5F542] bg-slate-800 px-2.5 py-0.5 rounded-full">
+                        {items.length} Peserta
+                      </span>
+                    </div>
+
+                    <div className="space-y-2.5">
+                      {items.map((p, idx) => (
+                        <div key={p.id || idx} className="bg-white border border-slate-200/80 rounded-2xl p-4 shadow-2xs hover:border-[#BCE88C] transition-colors space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
+                              <span className="text-[10px] font-mono text-slate-400 font-normal mr-0.5">#{idx + 1}</span>
+                              <span>{p.namaPeserta}</span>
+                              {p.umur && <span className="text-xs text-slate-500 font-normal">({p.umur} Thn)</span>}
+                            </h4>
+                            <button
+                              onClick={() => setDeleteModalId(p.id)}
+                              className="print:hidden p-1 text-slate-300 hover:text-rose-600 rounded-lg cursor-pointer shrink-0 transition-colors"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+
+                          <div className="text-xs text-slate-600 space-y-1 bg-[#F8F9FA] p-3 rounded-xl">
+                            <p className="font-semibold text-slate-800 text-[11px] uppercase tracking-wider">{p.type} • {p.kategoriGroup}</p>
+                            <ul className="list-disc list-inside text-slate-800 font-semibold space-y-0.5 pt-0.5">
+                              {p.lomba?.map((l, i) => <li key={i}>{cleanLombaTitle(l)}</li>)}
+                            </ul>
+                          </div>
+
+                          <div className="flex items-center justify-between pt-0.5">
+                            <span className="text-[10px] font-mono font-extrabold text-emerald-700 bg-[#E8FCD0] px-2 py-0.5 rounded-md">
+                              {p.code}
+                            </span>
+                            <span className="text-[11px] font-semibold text-slate-700">Blok: {p.blokRumah}</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
+              /* DEFAULT FLAT LIST WITH INFINITE SCROLL */
               <div className="space-y-2.5">
                 {/* PARTICIPANT CARDS — INFINITE SCROLL */}
                 {visibleParticipants.map((p, idx) => (
