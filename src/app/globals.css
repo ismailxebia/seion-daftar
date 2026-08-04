@@ -19,13 +19,13 @@ body {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 1.2cm 1.5cm;
+    margin: 1cm 1.2cm;
   }
 
   body {
     background: #ffffff !important;
     color: #000000 !important;
-    font-size: 11pt;
+    font-size: 10pt;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
   }
@@ -34,14 +34,23 @@ body {
   .print-table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 9.5pt;
+    margin-top: 4px;
+    font-size: 9pt;
+  }
+
+  .print-table thead {
+    display: table-header-group;
+  }
+
+  .print-table tr {
+    break-inside: avoid !important;
+    page-break-inside: avoid !important;
   }
 
   .print-table th,
   .print-table td {
     border: 1px solid #cbd5e1;
-    padding: 6px 8px;
+    padding: 5px 7px;
     text-align: left;
     vertical-align: top;
   }
@@ -56,5 +65,12 @@ body {
 
   .print-table tr:nth-child(even) {
     background-color: #f8fafc !important;
+  }
+
+  /* Prevent orphaned section and lomba headers */
+  .print-section-header,
+  .print-lomba-header {
+    break-after: avoid !important;
+    page-break-after: avoid !important;
   }
 }

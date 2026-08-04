@@ -976,7 +976,7 @@ export default function RegistrationPlatform() {
           </table>
         ) : (
           /* 2. FORMAT GROUPING LOMBA */
-          <div className="space-y-6">
+          <div className="space-y-4">
             {(() => {
               const { childrenMap, adultMap, performerMap } = getGroupedPdfData();
               const hasChildren = Object.keys(childrenMap).length > 0;
@@ -988,13 +988,13 @@ export default function RegistrationPlatform() {
                   {/* KATEGORI 1: LOMBA ANAK & REMAJA */}
                   {hasChildren && (
                     <div className="space-y-3">
-                      <div className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider">
+                      <div className="print-section-header bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider" style={{ breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                         I. KATEGORI LOMBA ANAK & REMAJA
                       </div>
 
                       {Object.entries(childrenMap).map(([lombaTitle, plist]) => (
-                        <div key={lombaTitle} className="space-y-1" style={{ pageBreakInside: 'avoid' }}>
-                          <div className="font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center">
+                        <div key={lombaTitle} className="space-y-1">
+                          <div className="print-lomba-header font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center" style={{ breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                             <span>🎯 LOMBA: {lombaTitle}</span>
                             <span className="text-[8.5pt] font-semibold text-slate-600">({plist.length} Peserta)</span>
                           </div>
@@ -1030,13 +1030,13 @@ export default function RegistrationPlatform() {
                   {/* KATEGORI 2: LOMBA DEWASA & PASUTRI */}
                   {hasAdults && (
                     <div className="space-y-3 pt-2">
-                      <div className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider">
+                      <div className="print-section-header bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider" style={{ breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                         II. KATEGORI LOMBA DEWASA & PASUTRI
                       </div>
 
                       {Object.entries(adultMap).map(([lombaTitle, plist]) => (
-                        <div key={lombaTitle} className="space-y-1" style={{ pageBreakInside: 'avoid' }}>
-                          <div className="font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center">
+                        <div key={lombaTitle} className="space-y-1">
+                          <div className="print-lomba-header font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center" style={{ breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                             <span>🏆 LOMBA / ACARA: {lombaTitle}</span>
                             <span className="text-[8.5pt] font-semibold text-slate-600">({plist.length} Peserta)</span>
                           </div>
@@ -1075,13 +1075,13 @@ export default function RegistrationPlatform() {
                   {/* KATEGORI 3: PENGISI ACARA MALAM PUNCAK */}
                   {hasPerformers && (
                     <div className="space-y-3 pt-2">
-                      <div className="bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider">
+                      <div className="print-section-header bg-slate-900 text-white font-bold text-xs px-3 py-1.5 rounded uppercase tracking-wider" style={{ breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                         III. PENGISI ACARA MALAM PUNCAK (17 AGUSTUS)
                       </div>
 
                       {Object.entries(performerMap).map(([jenisPenampilan, plist]) => (
-                        <div key={jenisPenampilan} className="space-y-1" style={{ pageBreakInside: 'avoid' }}>
-                          <div className="font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center">
+                        <div key={jenisPenampilan} className="space-y-1">
+                          <div className="print-lomba-header font-bold text-[10pt] text-slate-800 bg-slate-100 p-1.5 border border-slate-300 flex justify-between items-center" style={{ breakAfter: 'avoid', pageBreakAfter: 'avoid' }}>
                             <span>🎭 JENIS PENAMPILAN: {jenisPenampilan}</span>
                             <span className="text-[8.5pt] font-semibold text-slate-600">({plist.length} Penampil)</span>
                           </div>
@@ -1118,22 +1118,6 @@ export default function RegistrationPlatform() {
             })()}
           </div>
         )}
-
-        {/* Tanda Tangan Panitia di Laporan PDF */}
-        <div className="mt-12 flex justify-between text-xs text-slate-800" style={{ pageBreakInside: 'avoid' }}>
-          <div className="text-center w-52">
-            <p>Mengetahui,</p>
-            <p className="font-bold mt-1">Koordinator Acara</p>
-            <div className="h-16"></div>
-            <p className="border-t border-slate-500 font-semibold pt-1">( Panitia Seion 2026 )</p>
-          </div>
-          <div className="text-center w-52">
-            <p>Seion, {formattedToday}</p>
-            <p className="font-bold mt-1">Koordinator Pendaftaran</p>
-            <div className="h-16"></div>
-            <p className="border-t border-slate-500 font-semibold pt-1">( Safira / Aqhila )</p>
-          </div>
-        </div>
       </div>
 
       {/* ---------------------------------------------------- */}
