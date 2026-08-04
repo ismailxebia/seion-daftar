@@ -167,33 +167,48 @@ export default function RegistrationPlatform() {
     const adultMap: { [lombaName: string]: RegistrationParticipant[] } = {};
     const performerMap: { [jenisPenampilan: string]: RegistrationParticipant[] } = {};
 
-    filteredParticipants.forEach(p => {
+    const expandedList = expandParticipantsForDisplay(filteredParticipants);
+
+    expandedList.forEach(p => {
       if (p.type === 'Pengisi Acara') {
-        const jenis = p.lomba && p.lomba.length > 0 ? p.lomba[0] : 'Pengisi Acara';
+        const rawJenis = p.lomba && p.lomba.length > 0 ? p.lomba[0] : 'Pengisi Acara';
+        const jenis = cleanLombaTitle(rawJenis);
         if (!performerMap[jenis]) performerMap[jenis] = [];
-        performerMap[jenis].push(p);
+        if (!performerMap[jenis].some(existing => existing.id === p.id)) {
+          performerMap[jenis].push(p);
+        }
       } else if (p.type === 'Dewasa & Pasutri' || p.kategoriGroup?.includes('Dewasa') || p.kategoriGroup?.includes('Bapak') || p.kategoriGroup?.includes('Ibu') || p.kategoriGroup?.includes('Pasutri')) {
         if (p.lomba && p.lomba.length > 0) {
           p.lomba.forEach(lName => {
-            if (!adultMap[lName]) adultMap[lName] = [];
-            adultMap[lName].push(p);
+            const clean = cleanLombaTitle(lName);
+            if (!adultMap[clean]) adultMap[clean] = [];
+            if (!adultMap[clean].some(existing => existing.id === p.id)) {
+              adultMap[clean].push(p);
+            }
           });
         } else {
-          const fallbackKey = p.kategoriGroup || 'Dewasa';
+          const fallbackKey = cleanLombaTitle(p.kategoriGroup || 'Dewasa');
           if (!adultMap[fallbackKey]) adultMap[fallbackKey] = [];
-          adultMap[fallbackKey].push(p);
+          if (!adultMap[fallbackKey].some(existing => existing.id === p.id)) {
+            adultMap[fallbackKey].push(p);
+          }
         }
       } else {
         // Anak / Remaja
         if (p.lomba && p.lomba.length > 0) {
           p.lomba.forEach(lName => {
-            if (!childrenMap[lName]) childrenMap[lName] = [];
-            childrenMap[lName].push(p);
+            const clean = cleanLombaTitle(lName);
+            if (!childrenMap[clean]) childrenMap[clean] = [];
+            if (!childrenMap[clean].some(existing => existing.id === p.id)) {
+              childrenMap[clean].push(p);
+            }
           });
         } else {
-          const fallbackKey = p.kategoriGroup || 'Anak & Remaja';
+          const fallbackKey = cleanLombaTitle(p.kategoriGroup || 'Anak & Remaja');
           if (!childrenMap[fallbackKey]) childrenMap[fallbackKey] = [];
-          childrenMap[fallbackKey].push(p);
+          if (!childrenMap[fallbackKey].some(existing => existing.id === p.id)) {
+            childrenMap[fallbackKey].push(p);
+          }
         }
       }
     });
@@ -755,7 +770,7 @@ export default function RegistrationPlatform() {
 
   // AUDITED & REFINED EXCEL / CSV EXPORT
   const exportToExcel = () => {
-    const listToExport = expandParticipantsForDisplay(participants);
+    const listToExport = expandParticipantsForDisplay(filteredParticipants);
     if (listToExport.length === 0) {
       alert("Belum ada data peserta untuk diunduh.");
       return;
@@ -782,55 +797,66 @@ export default function RegistrationPlatform() {
     const csvLines: string[] = [];
     csvLines.push(`"REKAP DAFTAR PESERTA LOMBA KEMERDEKAAN SEION 2026"`);
     csvLines.push(`"HUT RI Ke-81 Cluster Mizu & B9-B10 (Format Grouping Lomba)"`);
-    csvLines.push(`"Tanggal Ekspor: ${todayStr} | Total: ${listToExport.length} Peserta"`);
+    csvLines.push(`"Tanggal Ekspor: ${todayStr} | Total Registrasi: ${filteredParticipants.length} Data"`);
     csvLines.push('');
 
-    const { childrenMap, adultMap, performerMap } = getGroupedPdfData();
+    // Group expanded participants by clean lomba title
+    const lombaMap: { [cleanTitle: string]: RegistrationParticipant[] } = {};
 
-    const appendCsvGroupSection = (sectionTitle: string, groupMap: { [lombaName: string]: RegistrationParticipant[] }) => {
-      if (Object.keys(groupMap).length === 0) return;
-
-      csvLines.push(`"============================================================"`);
-      csvLines.push(`"${sectionTitle}"`);
-      csvLines.push(`"============================================================"`);
-      csvLines.push('');
-
-      Object.entries(groupMap).forEach(([lombaTitle, plist]) => {
-        csvLines.push(`"🎯 LOMBA / ACARA: ${cleanLombaTitle(lombaTitle)} (${plist.length} Peserta)"`);
-        
-        const headers = [
-          "No.",
-          "Nama Peserta",
-          "Nama Ortu / Pasangan",
-          "Kategori",
-          "Blok Rumah",
-          "No. WhatsApp"
-        ];
-        csvLines.push(headers.map(h => `"${h}"`).join(','));
-
-        plist.forEach((p, index) => {
-          const parentOrSpouse = p.namaOrangTua && p.namaOrangTua !== '-'
-            ? p.namaOrangTua
-            : (p.namaPasangan && p.namaPasangan !== '-' ? p.namaPasangan : '-');
-
-          const row = [
-            index + 1,
-            cleanField(p.namaPeserta || '-'),
-            cleanField(parentOrSpouse),
-            cleanField(p.kategoriGroup || p.type || '-'),
-            cleanField(`Blok ${p.blokRumah}`),
-            cleanPhone(p.whatsapp)
-          ];
-          csvLines.push(row.join(','));
-        });
-
-        csvLines.push(''); // Spacing line between lomba tables
+    listToExport.forEach(p => {
+      const list = (p.lomba && p.lomba.length > 0) ? p.lomba : ['Lainnya'];
+      list.forEach(rawTitle => {
+        const cleanTitle = cleanLombaTitle(rawTitle);
+        if (!lombaMap[cleanTitle]) lombaMap[cleanTitle] = [];
+        if (!lombaMap[cleanTitle].some(existing => existing.id === p.id)) {
+          lombaMap[cleanTitle].push(p);
+        }
       });
-    };
+    });
 
-    appendCsvGroupSection('I. KATEGORI LOMBA ANAK & REMAJA', childrenMap);
-    appendCsvGroupSection('II. KATEGORI LOMBA DEWASA & PASUTRI', adultMap);
-    appendCsvGroupSection('III. PENGISI ACARA MALAM PUNCAK (17 AGUSTUS)', performerMap);
+    const sortedLombaKeys = Object.keys(lombaMap).sort((a, b) => {
+      const priorityA = getLombaPriority(a);
+      const priorityB = getLombaPriority(b);
+      if (priorityA !== priorityB) return priorityA - priorityB;
+      return a.localeCompare(b);
+    });
+
+    sortedLombaKeys.forEach((lombaTitle) => {
+      const plist = lombaMap[lombaTitle];
+      if (plist.length === 0) return;
+
+      csvLines.push(`"============================================================"`);
+      csvLines.push(`"🎯 LOMBA / ACARA: ${lombaTitle.toUpperCase()} (${plist.length} Peserta)"`);
+      csvLines.push(`"============================================================"`);
+      
+      const headers = [
+        "No.",
+        "Nama Peserta",
+        "Nama Ortu / Pasangan",
+        "Kategori",
+        "Blok Rumah",
+        "No. WhatsApp"
+      ];
+      csvLines.push(headers.map(h => `"${h}"`).join(','));
+
+      plist.forEach((p, index) => {
+        const parentOrSpouse = p.namaOrangTua && p.namaOrangTua !== '-'
+          ? p.namaOrangTua
+          : (p.namaPasangan && p.namaPasangan !== '-' ? p.namaPasangan : '-');
+
+        const row = [
+          index + 1,
+          cleanField(p.namaPeserta || '-'),
+          cleanField(parentOrSpouse),
+          cleanField(p.kategoriGroup || p.type || '-'),
+          cleanField(`Blok ${p.blokRumah}`),
+          cleanPhone(p.whatsapp)
+        ];
+        csvLines.push(row.join(','));
+      });
+
+      csvLines.push(''); // Spacing line between lomba tables
+    });
 
     const csvString = "\uFEFF" + csvLines.join("\n");
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
