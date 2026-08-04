@@ -501,7 +501,7 @@ export default function RegistrationPlatform() {
             namaPeserta: `Pasutri (${bapakName} & ${ibuName})`,
             role: 'Pasutri',
             hasSpouse: true,
-            namaPasangan: `${bapakName} & ${ibuName}`,
+            namaPasangan: '-',
             kategoriGroup: 'Lomba Pasutri',
             lomba: pasutriLomba,
             whatsapp: adultData.whatsapp.trim() || '-',
@@ -711,7 +711,7 @@ export default function RegistrationPlatform() {
               id: `${p.id}-P`,
               code: p.code ? `${p.code}-P` : p.code,
               namaPeserta: `Pasutri (${bapakName} & ${ibuName})`,
-              namaPasangan: `${bapakName} & ${ibuName}`,
+              namaPasangan: '-',
               role: 'Pasutri',
               kategoriGroup: 'Lomba Pasutri',
               lomba: pasutriLomba
@@ -1057,7 +1057,11 @@ export default function RegistrationPlatform() {
                                   <td style={{ textAlign: 'center', fontWeight: 'bold' }}>{i + 1}</td>
                                   <td style={{ fontWeight: 'bold', fontFamily: 'monospace' }}>{p.code}</td>
                                   <td style={{ fontWeight: 'bold' }}>{p.namaPeserta}</td>
-                                  <td>{p.namaPasangan || '-'}</td>
+                                  <td>
+                                    {(p.role === 'Pasutri' || p.kategoriGroup === 'Lomba Pasutri' || p.namaPeserta?.startsWith('Pasutri'))
+                                      ? '-'
+                                      : (p.namaPasangan || '-')}
+                                  </td>
                                   <td>{p.kategoriGroup}</td>
                                   <td>
                                     <div>Blok {p.blokRumah}</div>
