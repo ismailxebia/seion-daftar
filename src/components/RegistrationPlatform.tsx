@@ -768,7 +768,7 @@ export default function RegistrationPlatform() {
     return expanded;
   };
 
-  // AUDITED & REFINED EXCEL / CSV EXPORT
+  // AUDITED & REFINED EXCEL / CSV EXPORT (EXCEL GRID COMPATIBLE)
   const exportToExcel = () => {
     const listToExport = expandParticipantsForDisplay(filteredParticipants);
     if (listToExport.length === 0) {
@@ -800,6 +800,18 @@ export default function RegistrationPlatform() {
     csvLines.push(`"Tanggal Ekspor: ${todayStr} | Total Registrasi: ${filteredParticipants.length} Data"`);
     csvLines.push('');
 
+    // Single master table headers at the top so Excel initializes column grid properly
+    const masterHeaders = [
+      "No.",
+      "Cabang Lomba / Acara",
+      "Nama Peserta",
+      "Nama Ortu / Pasangan",
+      "Kategori Usia / Type",
+      "Blok Rumah",
+      "No. WhatsApp"
+    ];
+    csvLines.push(masterHeaders.map(h => `"${h}"`).join(','));
+
     // Group expanded participants by clean lomba title
     const lombaMap: { [cleanTitle: string]: RegistrationParticipant[] } = {};
 
@@ -807,6 +819,7 @@ export default function RegistrationPlatform() {
       const list = (p.lomba && p.lomba.length > 0) ? p.lomba : ['Lainnya'];
       list.forEach(rawTitle => {
         const cleanTitle = cleanLombaTitle(rawTitle);
+        if (!cleanTitle) return;
         if (!lombaMap[cleanTitle]) lombaMap[cleanTitle] = [];
         if (!lombaMap[cleanTitle].some(existing => existing.id === p.id)) {
           lombaMap[cleanTitle].push(p);
@@ -823,21 +836,10 @@ export default function RegistrationPlatform() {
 
     sortedLombaKeys.forEach((lombaTitle) => {
       const plist = lombaMap[lombaTitle];
-      if (plist.length === 0) return;
+      if (!plist || plist.length === 0) return;
 
-      csvLines.push(`"============================================================"`);
-      csvLines.push(`"🎯 LOMBA / ACARA: ${lombaTitle.toUpperCase()} (${plist.length} Peserta)"`);
-      csvLines.push(`"============================================================"`);
-      
-      const headers = [
-        "No.",
-        "Nama Peserta",
-        "Nama Ortu / Pasangan",
-        "Kategori",
-        "Blok Rumah",
-        "No. WhatsApp"
-      ];
-      csvLines.push(headers.map(h => `"${h}"`).join(','));
+      // Section Banner Row directly inside Excel Grid
+      csvLines.push(`"---",${cleanField(`🎯 LOMBA: ${lombaTitle.toUpperCase()} (${plist.length} Peserta)`)}`);
 
       plist.forEach((p, index) => {
         const parentOrSpouse = p.namaOrangTua && p.namaOrangTua !== '-'
@@ -846,6 +848,7 @@ export default function RegistrationPlatform() {
 
         const row = [
           index + 1,
+          cleanField(lombaTitle),
           cleanField(p.namaPeserta || '-'),
           cleanField(parentOrSpouse),
           cleanField(p.kategoriGroup || p.type || '-'),
@@ -855,7 +858,7 @@ export default function RegistrationPlatform() {
         csvLines.push(row.join(','));
       });
 
-      csvLines.push(''); // Spacing line between lomba tables
+      csvLines.push(''); // Spacing line between lomba groups
     });
 
     const csvString = "\uFEFF" + csvLines.join("\n");
@@ -2131,7 +2134,7 @@ export default function RegistrationPlatform() {
                             animate="visible"
                             exit="exit"
                             style={{ originY: 0 }}
-                            className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
+                            className="absolute -right-16 sm:right-0 top-full mt-2 w-60 sm:w-64 max-w-[calc(100vw-2.5rem)] bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
                           >
                             <div className="px-3 py-1.5 text-[10.5px] font-extrabold uppercase tracking-wider text-slate-400">
                               Tampilan & Grouping Data
@@ -2233,7 +2236,7 @@ export default function RegistrationPlatform() {
                             animate="visible"
                             exit="exit"
                             style={{ originY: 0 }}
-                            className="absolute right-0 top-full mt-2 w-64 bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
+                            className="absolute right-0 top-full mt-2 w-60 sm:w-64 max-w-[calc(100vw-2.5rem)] bg-white/95 backdrop-blur-md border border-slate-200 rounded-2xl p-1.5 shadow-[0_10px_38px_-10px_rgba(22,23,24,0.25),0_10px_20px_-15px_rgba(22,23,24,0.1)] z-40 space-y-1 text-left overflow-hidden"
                           >
                             {/* Option 1: Excel (.csv) */}
                             <motion.button
