@@ -781,36 +781,56 @@ export default function RegistrationPlatform() {
 
     const csvLines: string[] = [];
     csvLines.push(`"REKAP DAFTAR PESERTA LOMBA KEMERDEKAAN SEION 2026"`);
-    csvLines.push(`"HUT RI Ke-81 Cluster Mizu & B9-B10"`);
+    csvLines.push(`"HUT RI Ke-81 Cluster Mizu & B9-B10 (Format Grouping Lomba)"`);
     csvLines.push(`"Tanggal Ekspor: ${todayStr} | Total: ${listToExport.length} Peserta"`);
     csvLines.push('');
-    const headers = [
-      "No.",
-      "Kode Reg",
-      "Nama Peserta",
-      "Nama Orang Tua",
-      "Kategori / Role",
-      "Lomba Diikuti",
-      "Blok / Rumah",
-      "No. WhatsApp"
-    ];
-    csvLines.push(headers.map(h => `"${h}"`).join(','));
 
-    listToExport.forEach((p, index) => {
-      const parentDisplay = (p.type === 'Anak / Remaja' || (p.namaOrangTua && p.namaOrangTua !== '-')) ? p.namaOrangTua : '-';
+    const { childrenMap, adultMap, performerMap } = getGroupedPdfData();
 
-      const row = [
-        index + 1,
-        cleanField(p.code || '-'),
-        cleanField(p.namaPeserta || '-'),
-        cleanField(parentDisplay),
-        cleanField(p.kategoriGroup || p.type || '-'),
-        cleanField(Array.isArray(p.lomba) ? p.lomba.join('; ') : '-'),
-        cleanField(p.blokRumah || '-'),
-        cleanPhone(p.whatsapp)
-      ];
-      csvLines.push(row.join(','));
-    });
+    const appendCsvGroupSection = (sectionTitle: string, groupMap: { [lombaName: string]: RegistrationParticipant[] }) => {
+      if (Object.keys(groupMap).length === 0) return;
+
+      csvLines.push(`"============================================================"`);
+      csvLines.push(`"${sectionTitle}"`);
+      csvLines.push(`"============================================================"`);
+      csvLines.push('');
+
+      Object.entries(groupMap).forEach(([lombaTitle, plist]) => {
+        csvLines.push(`"🎯 LOMBA / ACARA: ${cleanLombaTitle(lombaTitle)} (${plist.length} Peserta)"`);
+        
+        const headers = [
+          "No.",
+          "Nama Peserta",
+          "Nama Ortu / Pasangan",
+          "Kategori",
+          "Blok Rumah",
+          "No. WhatsApp"
+        ];
+        csvLines.push(headers.map(h => `"${h}"`).join(','));
+
+        plist.forEach((p, index) => {
+          const parentOrSpouse = p.namaOrangTua && p.namaOrangTua !== '-'
+            ? p.namaOrangTua
+            : (p.namaPasangan && p.namaPasangan !== '-' ? p.namaPasangan : '-');
+
+          const row = [
+            index + 1,
+            cleanField(p.namaPeserta || '-'),
+            cleanField(parentOrSpouse),
+            cleanField(p.kategoriGroup || p.type || '-'),
+            cleanField(`Blok ${p.blokRumah}`),
+            cleanPhone(p.whatsapp)
+          ];
+          csvLines.push(row.join(','));
+        });
+
+        csvLines.push(''); // Spacing line between lomba tables
+      });
+    };
+
+    appendCsvGroupSection('I. KATEGORI LOMBA ANAK & REMAJA', childrenMap);
+    appendCsvGroupSection('II. KATEGORI LOMBA DEWASA & PASUTRI', adultMap);
+    appendCsvGroupSection('III. PENGISI ACARA MALAM PUNCAK (17 AGUSTUS)', performerMap);
 
     const csvString = "\uFEFF" + csvLines.join("\n");
     const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
