@@ -2307,7 +2307,7 @@ export default function RegistrationPlatform() {
               <div className="space-y-5">
                 {groupedByBlok.map(({ blokKey, items }) => (
                   <div key={blokKey} className="space-y-2.5">
-                    <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xs">
+                    <div className="sticky top-3 z-20 flex items-center justify-between bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-md border border-slate-800">
                       <span className="flex items-center gap-2">
                         <Home className="w-4 h-4 text-[#C5F542]" />
                         <span>Blok {blokKey}</span>
@@ -2358,7 +2358,7 @@ export default function RegistrationPlatform() {
               <div className="space-y-5">
                 {groupedByLomba.map(({ lombaKey, items }) => (
                   <div key={lombaKey} className="space-y-2.5">
-                    <div className="flex items-center justify-between bg-slate-900 text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-2xs">
+                    <div className="sticky top-3 z-20 flex items-center justify-between bg-slate-900/95 backdrop-blur-md text-white px-4 py-2.5 rounded-2xl text-xs font-bold shadow-md border border-slate-800">
                       <span className="flex items-center gap-2">
                         <Trophy className="w-4 h-4 text-[#C5F542]" />
                         <span>{lombaKey}</span>
